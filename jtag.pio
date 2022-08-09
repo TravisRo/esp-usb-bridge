@@ -1,0 +1,121 @@
+
+; 16-bit data:
+; BIT  0    = Flush
+; BIT  1-11 = Repeat count
+; BIT  12   = TDI out			(out base + 0)
+; BIT  13   = TMS out			(out base + 1)
+; BIT  14   = TDO requested		(in base + 0)
+.program jtag_simple
+; 1) 8 pio intructions per bit when tdo is not requested
+; 2) 9 pio intructions per bit when tdo is requested
+; 30mhz max JTAG clock when clk_sys = 240mhz!
+.define public cycles_per_bit 10
+
+; JTACK TCK						(side base + 0)
+.side_set 1 opt
+
+.wrap_target
+do_next_command:
+	pull						side 0
+	; move flush bit to x, TCK=0
+	out x, 1
+	jmp !x skip_flush
+	; x = number of flushes + 1
+	out x, 15
+flush_next_bit:
+	; discard x number of bits
+	irq wait 4 [4]
+	jmp x-- flush_next_bit
+	jmp do_next_command
+skip_flush:
+	; store repeat count in x
+	out x, 11
+	; output tdi, tms to the pins
+	out pins, 2
+	; store tdo req in Y
+	out y, 1							; T=5
+do_repeat:
+	; read TDO only if y=1, TCK=1
+	jmp !y skip_tdo_requested	side 1
+	irq set 4							; T/WTDO=7
+	jmp continue_with_tdo_requested
+skip_tdo_requested:
+	nop [1]
+continue_with_tdo_requested:
+	; this is always hit at the
+	; end of a single, or repeated
+	; command
+	jmp !x do_next_command [1]							; T/WTDO=8, T/NTDO=7
+	; extra 5 cycle delay if 
+	; repeating to keep the clock
+	; cycles even
+	nop							side 0
+	nop [2]
+	; this is always going to jump to do_repeat but we still need to decrement the repeat count
+	; TCK = 1
+	jmp x-- do_repeat
+.wrap
+
+.program jtag_tdo_slave
+.wrap_target
+	wait 1 irq 4
+	in pins, 1
+.wrap
+
+% c-sdk {
+#include "hardware/clocks.h"
+
+#define JTAG_RX_PUSH_THRESHOLD (8)
+
+//; 3-bit data:
+//; BIT  0   = TDI out			(out pin 0)
+//; BIT  1   = TMS out			(set pin 0)
+//; BIT  2   = TDO requested	(in pin 0)
+//;            TCK              (side pin 0)
+static inline void jtag_simple_program_init(PIO pio, uint sm, uint offset,  uint slave_sm, uint slave_offset, uint tdi_tms, uint tdo, uint tck, float freq)
+{
+	const uint tdi = tdi_tms;
+	const uint tms = tdi_tms + 1;
+	
+	// assign pins to the PIO module
+	pio_gpio_init(pio, tdi); // TMS
+	pio_gpio_init(pio, tms); // TDI
+	//pio_gpio_init(pio, tdo); // TCK
+	pio_gpio_init(pio, tck); // TDO
+
+	pio_sm_config c = jtag_simple_program_get_default_config(offset);
+	// set pin bases
+	sm_config_set_out_pins(&c, tdi_tms, 2);
+	//sm_config_set_in_pins(&c, tdo);
+	sm_config_set_sideset_pins(&c, tck);
+
+	// TX FIFOs Working with 3bits at a time
+	sm_config_set_out_shift(&c, true, false, 32);
+
+	// RX FIFOs Working with 8bits
+	//sm_config_set_in_shift(&c, false, false, 32);
+	sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+
+	float div = clock_get_hz(clk_sys) / (freq * jtag_simple_cycles_per_bit);
+	sm_config_set_clkdiv(&c, div);
+
+	// set initial pin levels: TDI=0, TMS=1, TCK=0
+	pio_sm_set_pins_with_mask(pio, sm, (1u << (tms)), (1u << (tdi)) | (1u << (tms)) | (1u << (tck)));
+	
+	// set pin directions: OUTPUT=tdi,tms,tck   INPUT=tdo
+	pio_sm_set_pindirs_with_mask(pio, sm, (1u << (tdi)) | (1u << (tms)) | (1u << (tck)), (1u << (tdi)) | (1u << (tms)) | (1u << (tck)) | (1u << (tdo)));
+	//hw_set_bits(&pio->input_sync_bypass, 1u << tdo);
+	pio_sm_init(pio, sm, offset, &c);
+
+	// tdo rx slave sm
+	c = jtag_tdo_slave_program_get_default_config(slave_offset);
+	sm_config_set_in_pins(&c, tdo);
+	sm_config_set_in_shift(&c, true, true, JTAG_RX_PUSH_THRESHOLD);
+	sm_config_set_clkdiv(&c, div);
+	sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_RX);
+	pio_sm_init(pio, slave_sm, slave_offset, &c);
+
+	pio_set_sm_mask_enabled(pio, (1u << sm) | (1u << slave_sm), true);
+}
+
+%}

@@ -1,25 +1,62 @@
-# The following five lines of boilerplate have to be in your project's
-# CMakeLists in this exact order for cmake to work correctly
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.12)
+set(PICO_BOARD tzt_rgb_usbc_rp2040)
+set(CFG_TUSB_OS OPT_OS_FREERTOS)
+include(${PICO_SDK_PATH}/pico_sdk_init.cmake)
+set(TARGET dev_usbbridge_jtag)
 
-include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(TUsbBenchmark C CXX ASM)
 
-if(${IDF_VERSION_MAJOR} LESS 4 AND ${IDF_VERSION_MINOR} LESS 3)
-    message(FATAL_ERROR "ESP-IDF v${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR} is not supported! "
-        "Please use v4.3 or newer.")
-endif()
+include(PicoSDKConfig.cmake)
 
-project(bridge)
+# Pull in FreeRTOS
+add_subdirectory(E:/GitHub/FreeRTOS-Kernel/portable/ThirdParty/GCC/RP2040 BINARY_DIR)
 
+pico_sdk_init()
 
-if(${IDF_VERSION_MAJOR} EQUAL 4 AND ${IDF_VERSION_MINOR} EQUAL 3)
-    # add_library("tinyusb") was used instead of idf_component_register so "__idf_" wasn't added to the name
-    set(tinyusb_name "tinyusb")
-else()
-    set(tinyusb_name "__idf_tinyusb")
-endif()
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+cmake_minimum_required(VERSION 3.13)
 
-# Workaround for Vendor class. ESP-IDF v4.3 doesn't support it directly through its tinyusb "additions" layer.
-target_compile_definitions(${tinyusb_name} PUBLIC CFG_TUD_VENDOR=1)
-target_compile_definitions(${tinyusb_name} PUBLIC CFG_TUD_VENDOR_RX_BUFSIZE=64)
-target_compile_definitions(${tinyusb_name} PUBLIC CFG_TUD_VENDOR_TX_BUFSIZE=64)
+add_executable(dev_usbbridge_jtag)
+
+set(esp_loader_srcs
+    components/esp_loader/src/esp_loader.c
+    components/esp_loader/src/esp_targets.c
+    components/esp_loader/src/serial_comm.c
+    components/esp_loader/src/md5_hash.c
+    components/esp_loader/port/rp2040_port.c
+)
+# generate the header file into the source tree as it is included in the RP2040 datasheet
+pico_generate_pio_header(dev_usbbridge_jtag ${CMAKE_CURRENT_LIST_DIR}/ws2812/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
+pico_generate_pio_header(dev_usbbridge_jtag ${CMAKE_CURRENT_LIST_DIR}/jtag.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
+
+target_sources(dev_usbbridge_jtag PUBLIC
+        ${CMAKE_CURRENT_LIST_DIR}/main.c
+        ${CMAKE_CURRENT_LIST_DIR}/usb_descriptors.c
+        ${CMAKE_CURRENT_LIST_DIR}/freertos_hooks.c
+        ${CMAKE_CURRENT_LIST_DIR}/ws2812/ws2812.c
+        ${CMAKE_CURRENT_LIST_DIR}/jtag.c
+        ${CMAKE_CURRENT_LIST_DIR}/serial.c
+        ${CMAKE_CURRENT_LIST_DIR}/msc.c
+        ${esp_loader_srcs}
+       )
+
+# Make sure TinyUSB can find tusb_config.h
+target_include_directories(dev_usbbridge_jtag PUBLIC
+        ${CMAKE_CURRENT_LIST_DIR}
+        ${CMAKE_CURRENT_LIST_DIR}/ws2812
+        ${CMAKE_CURRENT_LIST_DIR}/generated
+        ${CMAKE_CURRENT_LIST_DIR}/components/esp_loader/include
+        ${CMAKE_CURRENT_LIST_DIR}/components/esp_loader/private_include
+         )
+
+# In addition to pico_stdlib required for common PicoSDK functionality, add dependency on tinyusb_device
+# for TinyUSB device support and tinyusb_board for the additional board support library used by the example
+target_link_libraries(dev_usbbridge_jtag PUBLIC pico_stdlib pico_stdio hardware_pio hardware_dma tinyusb_device tinyusb_board FreeRTOS-Kernel FreeRTOS-Kernel-Heap4 pico_unique_id)
+
+pico_add_extra_outputs(dev_usbbridge_jtag)
+add_custom_command(TARGET ${TARGET} POST_BUILD
+    COMMAND arm-none-eabi-size --format=gnu "${TARGET}.elf")
+
+# add url via pico_set_program_url
+# example_auto_set_url(dev_usbbridge_jtag)
