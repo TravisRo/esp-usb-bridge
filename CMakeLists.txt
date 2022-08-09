@@ -1,6 +1,30 @@
 cmake_minimum_required(VERSION 3.12)
-#set(PICO_BOARD tzt_rgb_usbc_rp2040)
+# TODO:
+# Set your custom board here
+# set(PICO_BOARD tzt_rgb_usbc_rp2040)
+
+# TODO:
+# For this to work properly, PicoSDK\1.3.0-Package\lib\tinyusb\hw\bsp\rp2040\family.cmake needs a small patch:
+#
+#	if (NOT CFG_TUSB_OS)
+#		set (CFG_TUSB_OS OPT_OS_PICO)
+#	endif()
+#
+#	target_compile_definitions(tinyusb_common_base INTERFACE
+#			CFG_TUSB_MCU=OPT_MCU_RP2040
+#			CFG_TUSB_OS=${CFG_TUSB_OS}
+#			CFG_TUSB_DEBUG=${TINYUSB_DEBUG_LEVEL}
+#	)
+#
 set(CFG_TUSB_OS OPT_OS_FREERTOS)
+
+# TODO:
+# PicoSDK is NOT included as a submodule so you will need to set
+# PICO_SDK_PATH from the cmake command line
+if (NOT PICO_SDK_PATH)
+    error("PICO_SDK_PATH must be set from the command line!")
+endif()
+
 include(${PICO_SDK_PATH}/pico_sdk_init.cmake)
 set(TARGET dev_usbbridge_jtag)
 
