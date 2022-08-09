@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-set(PICO_BOARD tzt_rgb_usbc_rp2040)
+#set(PICO_BOARD tzt_rgb_usbc_rp2040)
 set(CFG_TUSB_OS OPT_OS_FREERTOS)
 include(${PICO_SDK_PATH}/pico_sdk_init.cmake)
 set(TARGET dev_usbbridge_jtag)
@@ -9,7 +9,7 @@ project(TUsbBenchmark C CXX ASM)
 include(PicoSDKConfig.cmake)
 
 # Pull in FreeRTOS
-add_subdirectory(E:/GitHub/FreeRTOS-Kernel/portable/ThirdParty/GCC/RP2040 BINARY_DIR)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/FreeRTOS-Kernel/portable/ThirdParty/GCC/RP2040 BINARY_DIR)
 
 pico_sdk_init()
 
