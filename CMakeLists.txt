@@ -20,12 +20,9 @@ set(CFG_TUSB_OS OPT_OS_FREERTOS)
 
 # TODO:
 # PicoSDK is NOT included as a submodule so you will need to set
-# PICO_SDK_PATH from the cmake command line
-if (NOT PICO_SDK_PATH)
-    message( FATAL_ERROR "PICO_SDK_PATH must be set from the command line!")
-endif()
+# PICO_SDK_PATH from the cmake command line or environment variable
+include(${CMAKE_CURRENT_LIST_DIR}/pico_sdk_import.cmake)
 
-include(${PICO_SDK_PATH}/pico_sdk_init.cmake)
 set(TARGET dev_usbbridge_jtag)
 
 project(esp-usb-bridge-pico C CXX ASM)
