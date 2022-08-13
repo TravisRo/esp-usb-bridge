@@ -1,19 +1,23 @@
 #pragma once
 
+#include <assert.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 // pins connected to esp32 target
-#define GPIO_BOOT (14)
-#define GPIO_RST (13)
+#define GPIO_BOOT (6)
+#define GPIO_RST (7)
 #define GPIO_TXD (4)
 #define GPIO_RXD (5)
 
-#define CONFIG_BRIDGE_GPIO_TCK (22)
-#define CONFIG_BRIDGE_GPIO_TDI (10)
-#define CONFIG_BRIDGE_GPIO_TMS (11)
-#define CONFIG_BRIDGE_GPIO_TDO (18)
+#define CONFIG_BRIDGE_GPIO_TCK (29)
+#define CONFIG_BRIDGE_GPIO_TDI (27)
+#define CONFIG_BRIDGE_GPIO_TMS (28)
+#define CONFIG_BRIDGE_GPIO_TDO (14)
+
+_Static_assert(CONFIG_BRIDGE_GPIO_TMS == CONFIG_BRIDGE_GPIO_TDI+1, "TDI and TMS pins must be sequential! EG: If TDI=27 then TMS must be 28");
 
 #define SLAVE_UART_NUM          uart1
 #define SLAVE_UART_BUF_SIZE     (2 * 1024)
@@ -25,7 +29,7 @@ extern "C" {
 
 #define GET_BYTE(n, b)          (((n) >> ((b) * 8)) & 0xFF)
 
-#define CORE_AFFINITY_USB_TASK (1)
+#define CORE_AFFINITY_USB_TASK (2)
 #define CORE_AFFINITY_JTAG_TASK (1)
 #define CORE_AFFINITY_SERIAL_TASK (1)
 #define CORE_AFFINITY_MSC_TASK (1)
