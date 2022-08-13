@@ -17,7 +17,7 @@ ESP USB Bridge Pico creates a composite USB device accessible from the PC when t
 ### Using VisualGDB
 
 [VisualGDB](https://visualgdb.com) is an extention for Microsoft Visual Studios which enables a developer to seamlessly develop embedded software.  It's not free but it is the best tool for embedded software development I've ever used.
-If you don't want to waste time fiddling with build environments and sub-par code editors then it's defineately for you.  It is available in four different flavors but the `Embedded` version ($99 US) is all you need for this project.
+If you don't want to waste time fiddling with build environments and sub-par code editors then it's definitely for you.  It is available in four different flavors but the `Embedded` version ($99 US) is all you need for this project.
 
 A VisualGDB solution and project file is provided but you will need to replace the pico-sdk that VisualGDB installs with my [pico-sdk](https://github.com/TravisRo/pico-sdk) fork. This is neccessary because the [tinyusb](https://github.com/hathach/tinyusb)
 version included with orginal pico-sdk is `0.12` and this project requires `0.14`.
