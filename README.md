@@ -2,6 +2,7 @@
 
 
 ESP USB Bridge Pico is a port of the [ESP-IDF](https://github.com/espressif/esp-idf) project utilizing a Raspberry PI RP2040 chip to create a bridge between a computer (PC) and a target microcontroller (MCU). It can serve as a replacement for USB-to-UART chips (e.g. CP210x).
+The JTAG implementation uses the RP2040 infamous PIO peripheral in combination with DMA to achieve JTAG speeds in excess of 20 MHZ.  The JTAG frequency is set in KHZs using the openocd command parameter `-c adapter speed xxxx`.  IE: `-c adapter speed 10000` sets the frequency to 10MHZ.
 
 The concept of ESP USB Bridge is shown in the following figure.
 
