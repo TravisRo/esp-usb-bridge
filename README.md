@@ -108,7 +108,7 @@ idf.py uf2
 
 ## Known Issues
 
-- The JTAG communication is currently slow. `set remotetimeout 100` should be set before loading the project binary. The command can be placed into the `gdbinit` file as the first instruction.
+- None
 
 ## License
 
