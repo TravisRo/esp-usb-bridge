@@ -55,8 +55,8 @@ static void tusb_device_task(void *pvParameters)
 
 int main(void)
 {
-	//vreg_set_voltage(VREG_VOLTAGE_1_15);
-	//set_sys_clock_khz(240000, true);
+	vreg_set_voltage(VREG_VOLTAGE_1_15);
+	set_sys_clock_khz(260000, true);
 
 	board_init();
 	init_serial_no();
