@@ -64,6 +64,7 @@ make
 The only requirement for the RP2040 board is that it has 8 pins available for full functionality.  4 pins are required for the JTAG interface and 4 pins are required for the programming interface.  The JTAG TDI and TMS pins must be sequential!  IE: If you use GPIO 27 for TDI then you MUST use GPIO 28 for TMS.
 
 > Default PIN Assignments
+
 |ESP Signal    |RP2040 PIN |Description                                       |
 |:-------------|:---------:|:-------------------------------------------------|
 |IO-0          |GPIO6      |ESP BOOT pin for serial programming interface     |
