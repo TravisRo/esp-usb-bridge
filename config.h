@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+// PICO_DEFAULT_WS2812_PIN is generally defined in the boards header file for those that have it.
+// If you have a custom board with a WS2812 you can define WS2812_PIN here.
 #ifdef PICO_DEFAULT_WS2812_PIN
 #define WS2812_PIN PICO_DEFAULT_WS2812_PIN
 #endif
@@ -45,16 +47,11 @@ _Static_assert(CONFIG_BRIDGE_GPIO_TMS == CONFIG_BRIDGE_GPIO_TDI+1, "TDI and TMS 
  */
 typedef enum
 {
-	CHIP_ESP32 = 1,
-	//!< ESP32
-	CHIP_ESP32S2 = 2,
-	//!< ESP32-S2
-	CHIP_ESP32S3 = 9,
-	//!< ESP32-S3
-	CHIP_ESP32C3 = 5,
-	//!< ESP32-C3
-	CHIP_ESP32H2 = 6,
-	//!< ESP32-H2
+	CHIP_ESP32 = 1,		//!< ESP32
+	CHIP_ESP32S2 = 2,	//!< ESP32-S2
+	CHIP_ESP32S3 = 9,	//!< ESP32-S3
+	CHIP_ESP32C3 = 5,	//!< ESP32-C3
+	CHIP_ESP32H2 = 6,	//!< ESP32-H2
 } esp_chip_model_t;
 
 // espressif uses a uint8_t StackType_t in there freertos port.  Most everyone else uses a uint32_t
