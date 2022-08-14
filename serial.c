@@ -249,7 +249,7 @@ void tud_cdc_line_state_cb(const uint8_t itf, const bool dtr, const bool rts)
 		{
 			jtag_task_suspend();
 			tdi_bootstrapping = true;
-			gpio_put(CONFIG_BRIDGE_GPIO_TDO, 0);
+			gpio_put(GPIO_TDO, 0);
 			ESP_LOGW(TAG, "jtag task suspended");
 		}
 		if (tdi_bootstrapping && boot && rst)

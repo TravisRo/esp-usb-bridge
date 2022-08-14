@@ -207,7 +207,7 @@ bool tud_vendor_control_xfer_cb(const uint8_t rhport, const uint8_t stage, tusb_
 			// TODO: process the commands
 			break;
 		case VEND_JTAG_GETTDO: {
-			uint8_t buf = gpio_get(CONFIG_BRIDGE_GPIO_TDO);
+			uint8_t buf = gpio_get(GPIO_TDO);
 			return tud_control_xfer(rhport, request, (void *)&buf, 1);
 		}
 		break;
@@ -232,7 +232,7 @@ static void init_jtag_pio(void)
 	jtag_ctx.sm_rx = pio_claim_unused_sm(jtag_ctx.pio, true);
 
 	jtag_ctx.offset_rx = pio_add_program(jtag_ctx.pio, &jtag_tdo_slave_program);
-	jtag_simple_program_init(jtag_ctx.pio, jtag_ctx.sm_tx, jtag_ctx.offset_tx, jtag_ctx.sm_rx, jtag_ctx.offset_rx, CONFIG_BRIDGE_GPIO_TDI, CONFIG_BRIDGE_GPIO_TDO, CONFIG_BRIDGE_GPIO_TCK, 1000000ul);
+	jtag_simple_program_init(jtag_ctx.pio, jtag_ctx.sm_tx, jtag_ctx.offset_tx, jtag_ctx.sm_rx, jtag_ctx.offset_rx, GPIO_TDI, GPIO_TDO, GPIO_TCK, 1000000ul);
 }
 
 // Invoked when received new data
