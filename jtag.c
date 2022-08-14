@@ -22,6 +22,7 @@
 #include "generated/jtag.pio.h"
 #include "hardware/dma.h"
 #include "stream_buffer.h"
+#include "ws2812.h"
 
 #define MAKE_DAT(tdo, tms, tdi) ((tdo << 2)|(tms << 1)|(tdi << 0))
 #define IS_TDO(dat) (dat & 0b100) ? true : false
@@ -92,11 +93,11 @@ typedef struct _jtag_context_t
 #define VEND_JTAG_SET_CHIPID    3
 
 #define JTAG_BASE_FREQ_HZ (20000000)
-// TCK frequency is around 750KHZ and we do not support selective clock for now.
 #define TCK_FREQ(khz) ((khz * 2) / 10)
 #define TCK_FREQ_HZ_FROM_DIV(div)((float)JTAG_BASE_FREQ_HZ/(div))
 
-static const jtag_proto_caps_t jtag_proto_caps = {
+static const jtag_proto_caps_t jtag_proto_caps = 
+{
 	{ .proto_ver = JTAG_PROTO_CAPS_VER, .length = sizeof(jtag_proto_caps_hdr_t) + sizeof(jtag_proto_caps_speed_apb_t) },
 	{ .type = JTAG_PROTO_CAPS_SPEED_APB_TYPE, .length = sizeof(jtag_proto_caps_speed_apb_t), .apb_speed_10khz = TCK_FREQ(JTAG_BASE_FREQ_HZ / 1000), .div_min = 1, .div_max = 200 }
 };
@@ -224,7 +225,6 @@ bool tud_vendor_control_xfer_cb(const uint8_t rhport, const uint8_t stage, tusb_
 
 static void init_jtag_pio(void)
 {
-
 	jtag_ctx.pio = pio0;
 	jtag_ctx.offset_tx = pio_add_program(jtag_ctx.pio, &jtag_simple_program);
 	jtag_ctx.offset_rx = pio_add_program(jtag_ctx.pio, &jtag_tdo_slave_program);
@@ -511,7 +511,7 @@ void __not_in_flash_func(jtag_task)(void *pvParameters)
 	while (1)
 	{
 		cnt = xStreamBufferReceive(usb_recv_buf.handle, nibbles, sizeof(nibbles), portMAX_DELAY);
-
+		ws2812_set_rgb_state(RGB_LED_STATE_JTAG);
 		ESP_LOGD(TAG, "JTAG processing %d bytes from usb_rcvbuf", cnt);
 		ESP_LOG_BUFFER_HEXDUMP(TAG, nibbles, cnt, ESP_LOG_DEBUG);
 

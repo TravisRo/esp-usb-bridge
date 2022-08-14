@@ -29,6 +29,7 @@
 #include "tusb.h"
 #include "components/esp_loader/port/rp2040_port.h"
 #include "stream_buffer.h"
+#include "ws2812.h"
 
 static const char *TAG = "bridge_serial";
 
@@ -190,6 +191,8 @@ static int64_t state_change_timer_cb(alarm_id_t id, void *user_data)
 	ESP_LOGI(TAG, "BOOT = 1, RST = 1");
 	gpio_set_mask((1 << GPIO_BOOT) | (1 << GPIO_RST));
 	state_change_timer = -1;
+	ws2812_set_rgb_state_isr(RGB_LED_STATE_PROG_B1_R1);
+
 	return 0;
 }
 
@@ -237,6 +240,15 @@ void tud_cdc_line_state_cb(const uint8_t itf, const bool dtr, const bool rts)
 	{
 		ESP_LOGI(TAG, "DTR = %d, RTS = %d -> BOOT = %d, RST = %d", dtr, rts, boot, rst);
 
+		if (boot && rst)
+			ws2812_set_rgb_state(RGB_LED_STATE_PROG_B1_R1);
+		else if (!boot && rst)
+			ws2812_set_rgb_state(RGB_LED_STATE_PROG_B0_R1);
+		else if (boot && !rst)
+			ws2812_set_rgb_state(RGB_LED_STATE_PROG_B1_R0);
+		else if (!boot && !rst)
+			ws2812_set_rgb_state(RGB_LED_STATE_PROG_B0_R0);
+		
 		gpio_put(GPIO_BOOT, boot);
 		gpio_put(GPIO_RST, rst);
 
@@ -278,8 +290,6 @@ static int32_t uart_read_for_loader(uint8_t* buf, uint32_t len, uint32_t timeout
 		total_transferred += rcv_length;
 		len -= rcv_length;
 	}
-
-
 
 	return total_transferred;
 }
@@ -383,12 +393,14 @@ void serial_set(const bool enable)
 			vTaskResume(uart_to_cdc_task_handle);
 			vTaskResume(cdc_to_uart_task_handle);
 			serial_read_enabled = true;
+			ws2812_set_rgb_state(RGB_LED_STATE_MSC_END);
 		}
 		else
 		{
 			serial_read_enabled = false;
 			vTaskSuspend(uart_to_cdc_task_handle);
 			vTaskSuspend(cdc_to_uart_task_handle);
+			ws2812_set_rgb_state(RGB_LED_STATE_MSC_START);
 		}
 	}
 }

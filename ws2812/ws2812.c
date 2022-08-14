@@ -3,6 +3,8 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -16,15 +18,47 @@
 #include "task.h"
 #include "semphr.h"
 
+#if (defined(WS2812_PIN))
 #define IS_RGBW true
 
 static LED_COLOR_T _ledStateStartup[] = {
-	{ 50, 0, 0, 1 },
-	// RED
-	{ 0, 50, 0, 1 },
-	// GREEN
-	{ 0, 0, 50, 1 },
-	// BLUE
+	{ 100, 0, 0, 10 },		// RED
+	{ 0, 0, 0, 10 },		// BLACK
+	{ 0, 0, 0, 0 }
+};
+static LED_COLOR_T _ledStateJTAG[] = {
+	{ 0, 100, 0, 2 },		// GREEN
+	{ 0, 0, 125, 2 },		// BLUE
+	{ 0, 0, 0, 0 }
+};
+
+static LED_COLOR_T _ledStatePROG_B1R1[] = {
+	{ 0, 100, 0, 10 },		// GREEN
+	{ 0, 0, 0, 0 }
+};
+
+static LED_COLOR_T _ledStatePROG_B1R0[] = {
+	{ 100, 0, 0, 10 },		// RED
+	{ 0, 0, 0, 0 }
+};
+
+static LED_COLOR_T _ledStatePROG_B0R1[] = {
+	{ 0, 0, 125, 10 },		// BLUE
+	{ 0, 0, 0, 0 }
+};
+
+static LED_COLOR_T _ledStatePROG_B0R0[] = {
+	{ 100, 50, 0, 10 },	// ORANGE
+	{ 0, 0, 0, 0 }
+};
+
+static LED_COLOR_T _ledStateMSC_Start[] = {
+	{ 75, 0, 100, 10 },	// PURPLE
+	{ 0, 0, 0, 0 }
+};
+
+static LED_COLOR_T _ledStateMSC_End[] = {
+	{ 0, 100, 0, 10 },		// GREEN
 	{ 0, 0, 0, 0 }
 };
 
@@ -43,7 +77,6 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b)
 {
 	return ((uint32_t) (r) << 8) | ((uint32_t) (g) << 16) | (uint32_t) (b);
 }
-
 
 void ws2812_pio_init(PIO pio)
 {
@@ -70,7 +103,7 @@ static void ws2812_task(void * pvParameters)
 	RGB_LED_STATE currentState = RGB_LED_STATE_STARTUP;
 	RGB_LED_STATE lastNonPersistentState = RGB_LED_STATE_STARTUP;
 	
-	nextLedServiceTickTime =  xTaskGetTickCount() + pdMS_TO_TICKS(1000);
+	nextLedServiceTickTime =  xTaskGetTickCount() + pdMS_TO_TICKS(100);
 	
 	for (;;)
 	{
@@ -119,7 +152,35 @@ static void ws2812_task(void * pvParameters)
 						headLedColor = _ledStateStartup;
 						nextLedColor = headLedColor;
 						break;
-					default:
+					case RGB_LED_STATE_JTAG:
+						headLedColor = _ledStateJTAG;
+						nextLedColor = headLedColor;
+						break;
+					case RGB_LED_STATE_PROG_B1_R1:
+						headLedColor = _ledStatePROG_B1R1;
+						nextLedColor = headLedColor;
+						break;
+					case RGB_LED_STATE_PROG_B0_R1:
+						headLedColor = _ledStatePROG_B0R1;
+						nextLedColor = headLedColor;
+						break;
+					case RGB_LED_STATE_PROG_B1_R0:
+						headLedColor = _ledStatePROG_B1R0;
+						nextLedColor = headLedColor;
+						break;
+					case RGB_LED_STATE_PROG_B0_R0:
+						headLedColor = _ledStatePROG_B0R0;
+						nextLedColor = headLedColor;
+						break;
+					case RGB_LED_STATE_MSC_START:
+						headLedColor = _ledStateMSC_Start;
+						nextLedColor = headLedColor;
+						break;
+					case RGB_LED_STATE_MSC_END:
+						headLedColor = _ledStateMSC_End;
+						nextLedColor = headLedColor;
+						break;
+					default :
 						break;
 					}
 					
@@ -144,5 +205,7 @@ static void ws2812_task(void * pvParameters)
 
 void ws2812_start_task(void)
 {
-	xTaskCreateAffinitySet(ws2812_task, "ws2812_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, tskIDLE_PRIORITY + 1, CORE_AFFINITY_WS2812_TASK, &g_ws2812_task_handle);
+	xTaskCreateAffinitySet(ws2812_task, "ws2812_task", STACK_SIZE_FROM_BYTES(2 * 1024), NULL, tskIDLE_PRIORITY + 1, CORE_AFFINITY_WS2812_TASK, &g_ws2812_task_handle);
 }
+
+#endif

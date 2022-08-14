@@ -32,23 +32,10 @@
 #error "TinyUSB is not using freertos!"
 #endif
 
-
-static HeapStats_t heap_stats;
-static size_t minEverBytesRemaining = 0xFFFFFFFF;
-
 static void tusb_device_task(void *pvParameters)
 {
 	while (1)
 	{
-		vPortGetHeapStats(&heap_stats);
-		if (heap_stats.xMinimumEverFreeBytesRemaining < minEverBytesRemaining)
-		{
-			minEverBytesRemaining = heap_stats.xMinimumEverFreeBytesRemaining;
-			//printf("xMinimumEverFreeBytesRemaining:%u\r\n", heap_stats.xMinimumEverFreeBytesRemaining);
-		}
-		//ws2812_put_pixel(100, 0, 0);
-		//tud_task();
-		//ws2812_put_pixel(0, 100, 0);
 		tud_task();
 	}
 	vTaskDelete(NULL);
@@ -65,10 +52,8 @@ int main(void)
 	// init device stack on configured roothub port
 	tud_init(BOARD_TUD_RHPORT);
 
-#if (defined(WS2812_PIN))
 	ws2812_pio_init(pio0);
 	ws2812_start_task();
-#endif
 
 	xTaskCreateAffinitySet(tusb_device_task, "tusb_device_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, 5, CORE_AFFINITY_USB_TASK, NULL);
 	xTaskCreateAffinitySet(msc_task, "msc_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, 5, CORE_AFFINITY_MSC_TASK, NULL);
