@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.12)
 # TODO:
 # Set your custom board here
-set(PICO_BOARD tzt_rgb_usbc_rp2040)
-
+set(PICO_BOARD pico)
+# set(PICO_BOARD tzt_rgb_usbc_rp2040)
+# set(PICO_BOARD waveshare_rp2040_zero)
 # TODO:
 # For this to work properly, PicoSDK\1.3.0-Package\lib\tinyusb\hw\bsp\rp2040\family.cmake needs a small patch:
 #
