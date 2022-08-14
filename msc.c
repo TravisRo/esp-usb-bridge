@@ -33,13 +33,13 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "config.h"
 #include "esp_log.h"
 #include "esp_err.h"
 #include "tusb.h"
 #include "msc.h"
 #include "esp_loader.h"
 #include "serial.h"
-#include "config.h"
 
 #define FAT_CLUSTERS                    (6 * 1024)
 #define FAT_SECTORS_PER_CLUSTER         8

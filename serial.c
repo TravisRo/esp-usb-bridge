@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <pico/stdlib.h>
+#include "config.h"
 #include "esp_log.h"
 #include "esp_err.h"
 #include "FreeRTOS.h"
@@ -26,7 +27,6 @@
 #include "hardware/irq.h"
 #include "hardware/dma.h"
 #include "tusb.h"
-#include "config.h"
 #include "components/esp_loader/port/rp2040_port.h"
 #include "stream_buffer.h"
 

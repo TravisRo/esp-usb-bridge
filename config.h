@@ -1,11 +1,16 @@
 #pragma once
 
 #include <assert.h>
+#include "bsp/board.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#ifdef PICO_DEFAULT_WS2812_PIN
+#define WS2812_PIN PICO_DEFAULT_WS2812_PIN
+#endif
+	
 // pins connected to esp32 target
 #define GPIO_BOOT (6)
 #define GPIO_RST (7)
@@ -30,6 +35,7 @@ _Static_assert(CONFIG_BRIDGE_GPIO_TMS == CONFIG_BRIDGE_GPIO_TDI+1, "TDI and TMS 
 #define GET_BYTE(n, b)          (((n) >> ((b) * 8)) & 0xFF)
 
 #define CORE_AFFINITY_USB_TASK (2)
+#define CORE_AFFINITY_WS2812_TASK (2)
 #define CORE_AFFINITY_JTAG_TASK (1)
 #define CORE_AFFINITY_SERIAL_TASK (1)
 #define CORE_AFFINITY_MSC_TASK (1)

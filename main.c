@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "config.h"
 #include "bsp/board.h"
 #include "tusb.h"
 #include "usb_descriptors.h"
@@ -26,7 +27,7 @@
 #include "jtag.h"
 #include "serial.h"
 #include "msc.h"
-#include "config.h"
+
 #if (CFG_TUSB_OS != OPT_OS_FREERTOS)
 #error "TinyUSB is not using freertos!"
 #endif
@@ -64,12 +65,17 @@ int main(void)
 	// init device stack on configured roothub port
 	tud_init(BOARD_TUD_RHPORT);
 
-	//ws2812_pio_init(pio0);
+#if (defined(WS2812_PIN))
+	ws2812_pio_init(pio0);
+	ws2812_start_task();
+#endif
 
 	xTaskCreateAffinitySet(tusb_device_task, "tusb_device_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, 5, CORE_AFFINITY_USB_TASK, NULL);
 	xTaskCreateAffinitySet(msc_task, "msc_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, 5, CORE_AFFINITY_MSC_TASK, NULL);
 	xTaskCreateAffinitySet(start_serial_task, "start_serial_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, 5, CORE_AFFINITY_SERIAL_TASK, NULL);
 	xTaskCreateAffinitySet(jtag_task, "jtag_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, 5, CORE_AFFINITY_JTAG_TASK, NULL);
+	
+	
 	vTaskStartScheduler();
 
 	for (;;);

@@ -21,10 +21,10 @@
 
 static const uint16_t ws2812_program_instructions[] = {
             //     .wrap_target
-    0x6221, //  0: out    x, 1            side 0 [2] @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\ws2812\ws2812.pio:20
-    0x1123, //  1: jmp    !x, 3           side 1 [1] @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\ws2812\ws2812.pio:21
-    0x1400, //  2: jmp    0               side 1 [4] @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\ws2812\ws2812.pio:23
-    0xa442, //  3: nop                    side 0 [4] @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\ws2812\ws2812.pio:25
+    0x6221, //  0: out    x, 1            side 0 [2] @@@E:\GitHub\esp-usb-bridge-pico\ws2812\ws2812.pio:20
+    0x1123, //  1: jmp    !x, 3           side 1 [1] @@@E:\GitHub\esp-usb-bridge-pico\ws2812\ws2812.pio:21
+    0x1400, //  2: jmp    0               side 1 [4] @@@E:\GitHub\esp-usb-bridge-pico\ws2812\ws2812.pio:23
+    0xa442, //  3: nop                    side 0 [4] @@@E:\GitHub\esp-usb-bridge-pico\ws2812\ws2812.pio:25
             //     .wrap
 };
 
@@ -72,10 +72,10 @@ static inline void ws2812_program_init(PIO pio, uint sm, uint offset, uint pin, 
 
 static const uint16_t ws2812_parallel_program_instructions[] = {
             //     .wrap_target
-    0x6020, //  0: out    x, 32                      @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\ws2812\ws2812.pio:57
-    0xa10b, //  1: mov    pins, !null            [1] @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\ws2812\ws2812.pio:58
-    0xa401, //  2: mov    pins, x                [4] @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\ws2812\ws2812.pio:59
-    0xa103, //  3: mov    pins, null             [1] @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\ws2812\ws2812.pio:60
+    0x6020, //  0: out    x, 32                      @@@E:\GitHub\esp-usb-bridge-pico\ws2812\ws2812.pio:57
+    0xa10b, //  1: mov    pins, !null            [1] @@@E:\GitHub\esp-usb-bridge-pico\ws2812\ws2812.pio:58
+    0xa401, //  2: mov    pins, x                [4] @@@E:\GitHub\esp-usb-bridge-pico\ws2812\ws2812.pio:59
+    0xa103, //  3: mov    pins, null             [1] @@@E:\GitHub\esp-usb-bridge-pico\ws2812\ws2812.pio:60
             //     .wrap
 };
 

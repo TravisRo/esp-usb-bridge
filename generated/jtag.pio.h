@@ -19,24 +19,24 @@
 
 static const uint16_t jtag_simple_program_instructions[] = {
             //     .wrap_target
-    0x90a0, //  0: pull   block           side 0     @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:19
-    0x6021, //  1: out    x, 1                       @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:21
-    0x0027, //  2: jmp    !x, 7                      @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:22
-    0x602f, //  3: out    x, 15                      @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:24
-    0xc424, //  4: irq    wait 4                 [4] @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:27
-    0x0044, //  5: jmp    x--, 4                     @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:28
-    0x0000, //  6: jmp    0                          @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:29
-    0x602b, //  7: out    x, 11                      @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:32
-    0x6002, //  8: out    pins, 2                    @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:34
-    0x6041, //  9: out    y, 1                       @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:36
-    0x186d, // 10: jmp    !y, 13          side 1     @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:39
-    0xc004, // 11: irq    nowait 4                   @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:40
-    0x000e, // 12: jmp    14                         @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:41
-    0xa142, // 13: nop                           [1] @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:43
-    0x0120, // 14: jmp    !x, 0                  [1] @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:48
-    0xb042, // 15: nop                    side 0     @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:52
-    0xa242, // 16: nop                           [2] @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:53
-    0x004a, // 17: jmp    x--, 10                    @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:56
+    0x90a0, //  0: pull   block           side 0     @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:19
+    0x6021, //  1: out    x, 1                       @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:21
+    0x0027, //  2: jmp    !x, 7                      @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:22
+    0x602f, //  3: out    x, 15                      @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:24
+    0xc424, //  4: irq    wait 4                 [4] @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:27
+    0x0044, //  5: jmp    x--, 4                     @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:28
+    0x0000, //  6: jmp    0                          @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:29
+    0x602b, //  7: out    x, 11                      @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:32
+    0x6002, //  8: out    pins, 2                    @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:34
+    0x6041, //  9: out    y, 1                       @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:36
+    0x186d, // 10: jmp    !y, 13          side 1     @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:39
+    0xc004, // 11: irq    nowait 4                   @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:40
+    0x000e, // 12: jmp    14                         @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:41
+    0xa142, // 13: nop                           [1] @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:43
+    0x0120, // 14: jmp    !x, 0                  [1] @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:48
+    0xb042, // 15: nop                    side 0     @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:52
+    0xa242, // 16: nop                           [2] @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:53
+    0x004a, // 17: jmp    x--, 10                    @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:56
             //     .wrap
 };
 
@@ -64,8 +64,8 @@ static inline pio_sm_config jtag_simple_program_get_default_config(uint offset) 
 
 static const uint16_t jtag_tdo_slave_program_instructions[] = {
             //     .wrap_target
-    0x20c4, //  0: wait   1 irq, 4                   @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:61
-    0x4001, //  1: in     pins, 1                    @@@E:\projects\VisualGDB\RP2040\UsbBridgeJTag\jtag.pio:62
+    0x20c4, //  0: wait   1 irq, 4                   @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:61
+    0x4001, //  1: in     pins, 1                    @@@E:\GitHub\esp-usb-bridge-pico\jtag.pio:62
             //     .wrap
 };
 

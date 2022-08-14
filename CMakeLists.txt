@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 # TODO:
 # Set your custom board here
-# set(PICO_BOARD tzt_rgb_usbc_rp2040)
+set(PICO_BOARD tzt_rgb_usbc_rp2040)
 
 # TODO:
 # For this to work properly, PicoSDK\1.3.0-Package\lib\tinyusb\hw\bsp\rp2040\family.cmake needs a small patch:
@@ -50,6 +50,7 @@ set(esp_loader_srcs
 # generate the header file into the source tree as it is included in the RP2040 datasheet
 pico_generate_pio_header(dev_usbbridge_jtag ${CMAKE_CURRENT_LIST_DIR}/ws2812/ws2812.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
 pico_generate_pio_header(dev_usbbridge_jtag ${CMAKE_CURRENT_LIST_DIR}/jtag.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
+pico_generate_pio_header(dev_usbbridge_jtag ${CMAKE_CURRENT_LIST_DIR}/pio_uart_logger/uart_tx.pio OUTPUT_DIR ${CMAKE_CURRENT_LIST_DIR}/generated)
 
 target_sources(dev_usbbridge_jtag PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/main.c
