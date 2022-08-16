@@ -1,14 +1,13 @@
-#pragma once
+#include "config.h"
 
-#define ESP_LOG_ERROR 0
-#define ESP_LOG_WARN 1
-#define ESP_LOG_INFO 2
-#define ESP_LOG_DEBUG 3
-#define ESP_LOG_VERBOSE 4
+#ifndef _ESP_LOG_LEVEL
+#define _ESP_LOG_LEVEL
 
-#ifdef DISABLED
+#define LOG_NL "\r\n"
+
+#if (LOGGING_ENABLED())
 #define ESP_LOG_LEVEL_LOCAL(level, tag, format, ...) do {                                               \
-		if (level <= ESP_LOG_INFO) printf("[%s] " format "\r\n", tag, ## __VA_ARGS__); \
+	if (level <= LOG_LEVEL) printf("[%s] " format LOG_NL, tag, ## __VA_ARGS__); \
 }while(0)
 #else
 #define ESP_LOG_LEVEL_LOCAL(level, tag, format, ...)
@@ -20,3 +19,5 @@
 #define ESP_LOGD( tag, format, ... ) ESP_LOG_LEVEL_LOCAL(ESP_LOG_DEBUG,   tag, format, ## __VA_ARGS__)
 #define ESP_LOGV( tag, format, ... ) ESP_LOG_LEVEL_LOCAL(ESP_LOG_VERBOSE, tag, format, ## __VA_ARGS__)
 #define ESP_LOG_BUFFER_HEXDUMP(tag,buf,size,level)
+#endif
+	

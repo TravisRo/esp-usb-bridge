@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 3.12)
 # TODO:
 # Set your custom board here
-set(PICO_BOARD pico)
+# set(PICO_BOARD pico)
 # set(PICO_BOARD tzt_rgb_usbc_rp2040)
 # set(PICO_BOARD waveshare_rp2040_zero)
+
 # TODO:
 # For this to work properly, PicoSDK\1.3.0-Package\lib\tinyusb\hw\bsp\rp2040\family.cmake needs a small patch:
 #
@@ -39,7 +40,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 cmake_minimum_required(VERSION 3.13)
 
-add_executable(dev_usbbridge_jtag)
+add_executable(dev_usbbridge_jtag pio_uart_logger/pio_uart_logger.c)
 
 set(esp_loader_srcs
     components/esp_loader/src/esp_loader.c
@@ -58,6 +59,7 @@ target_sources(dev_usbbridge_jtag PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/usb_descriptors.c
         ${CMAKE_CURRENT_LIST_DIR}/freertos_hooks.c
         ${CMAKE_CURRENT_LIST_DIR}/ws2812/ws2812.c
+        ${CMAKE_CURRENT_LIST_DIR}/pio_uart_logger/pio_uart_logger.c
         ${CMAKE_CURRENT_LIST_DIR}/jtag.c
         ${CMAKE_CURRENT_LIST_DIR}/serial.c
         ${CMAKE_CURRENT_LIST_DIR}/msc.c
@@ -76,6 +78,9 @@ target_include_directories(dev_usbbridge_jtag PUBLIC
 # In addition to pico_stdlib required for common PicoSDK functionality, add dependency on tinyusb_device
 # for TinyUSB device support and tinyusb_board for the additional board support library used by the example
 target_link_libraries(dev_usbbridge_jtag PUBLIC pico_stdlib pico_stdio hardware_pio hardware_dma tinyusb_device tinyusb_board FreeRTOS-Kernel FreeRTOS-Kernel-Heap4 pico_unique_id)
+
+# Disable the STDOUT mutex and CRLF support since we are handling them ourself in the pio_uart_logger
+target_compile_definitions(dev_usbbridge_jtag PUBLIC PICO_STDOUT_MUTEX=0 PICO_STDIO_ENABLE_CRLF_SUPPORT=0)
 
 pico_add_extra_outputs(dev_usbbridge_jtag)
 add_custom_command(TARGET ${TARGET} POST_BUILD

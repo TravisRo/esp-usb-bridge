@@ -35,7 +35,7 @@
 
 #define ROUND_UP_BITS(x)            ((x + 7) & (~7))
 
-static const char *TAG = "bridge_jtag";
+
 
 /* esp usb serial protocol specific definitions */
 #define JTAG_PROTO_MAX_BITS      (512)
@@ -123,6 +123,11 @@ static uint8_t s_tdo_bytes[1024];
 static esp_chip_model_t s_target_model;
 static TaskHandle_t s_task_handle = NULL;
 
+static const char* USB_CTRL_TAG = "jtag-usbctl";
+static const char* USB_RX_TAG = "jtag-rx";
+static const char* USB_TX_TAG = "jtag-tx";
+static const char* JTAG_TASK_TAG = "jtag";
+
 static void jtag_pio_dma_init(void)
 {
 #if JTAG_RX_PUSH_THRESHOLD == 32
@@ -183,7 +188,7 @@ bool tud_vendor_control_xfer_cb(const uint8_t rhport, const uint8_t stage, tusb_
 	switch (request->bmRequestType_bit.type)
 	{
 	case TUSB_REQ_TYPE_VENDOR:
-		ESP_LOGI(TAG,
+		ESP_LOGI(USB_CTRL_TAG,
 		         "bRequest: (%d) wValue: (%d) wIndex: (%d)",
 		         request->bRequest,
 		         request->wValue,
@@ -194,7 +199,7 @@ bool tud_vendor_control_xfer_cb(const uint8_t rhport, const uint8_t stage, tusb_
 		case VEND_JTAG_SETDIV:
 			if (s_task_handle == NULL)
 			{
-				ESP_LOGE(TAG, "can't set JTAG clock until jtag_task is fully initialized!");
+				ESP_LOGE(USB_CTRL_TAG, "can't set JTAG clock until jtag_task is fully initialized!");
 				return false;
 			}
 			pio_set_sm_mask_enabled(jtag_ctx.pio, (1u << jtag_ctx.sm_tx) | (1u << jtag_ctx.sm_rx), false);
@@ -257,11 +262,9 @@ static void usb_reader_task(void *pvParameters)
 			uint32_t r;
 			while ((r = tud_vendor_n_read(0, buf, sizeof(buf))) > 0)
 			{
-				ESP_LOGD(TAG, "JTAG receiving %d bytes to USB", r);
-
 				if (xStreamBufferSend(usb_recv_buf.handle, buf, r, pdMS_TO_TICKS(1000)) != r)
 				{
-					ESP_LOGE(TAG,
+					ESP_LOGE(USB_RX_TAG,
 					         "Cannot write to usb_rcvbuf ringbuffer (free %d of %d)!",
 					         xStreamBufferSpacesAvailable(usb_recv_buf.handle),
 					         USB_RCVBUF_SIZE);
@@ -271,7 +274,7 @@ static void usb_reader_task(void *pvParameters)
 
 			if (xStreamBufferSpacesAvailable(usb_recv_buf.handle) < 0.25 * USB_RCVBUF_SIZE)
 			{
-				ESP_LOGW(TAG, "Ringbuffer is getting full!");
+				ESP_LOGW(USB_RX_TAG, "Ringbuffer is getting full!");
 				vTaskDelay(pdMS_TO_TICKS(1000));
 			}
 		}
@@ -283,22 +286,20 @@ static void usb_reader_task(void *pvParameters)
 	vTaskDelete(NULL);
 }
 
-
 static void usb_writer_task(void *pvParameters)
 {
 	uint8_t local_buf[CFG_TUD_VENDOR_EPSIZE];
 	for (;;)
 	{
-		if (!tud_mounted())
-		{
-			ESP_LOGD(TAG, "USB connection is not available!");
-			vTaskDelay(pdMS_TO_TICKS(1000));
-			continue;
-		}
 
 		size_t n = xStreamBufferReceive(usb_send_buf.handle, local_buf, sizeof(local_buf), portMAX_DELAY);
+		if (!tud_mounted())
+		{
+			vTaskDelay(pdMS_TO_TICKS(100));
+			continue;
+		}
 		uint8_t *buf = local_buf;
-		ESP_LOGD(TAG, "JTAG sending %d bytes to USB", n);
+		ESP_LOGD(USB_TX_TAG, "%d bytes", n);
 		for (int transferred = 0, to_send = n; transferred < n;)
 		{
 			int space;
@@ -309,8 +310,6 @@ static void usb_writer_task(void *pvParameters)
 			const int sent = tud_vendor_n_write(0, local_buf + transferred, MIN(space, to_send));
 			transferred += sent;
 			to_send -= sent;
-			ESP_LOGD(TAG, "Space was %d, USB sent %d bytes", space, sent);
-			ESP_LOG_BUFFER_HEXDUMP("USB sent", local_buf + transferred - sent, sent, ESP_LOG_DEBUG);
 			// there seems to be no flush for vendor class
 		}
 		tud_vendor_n_flush(0);
@@ -320,12 +319,10 @@ static void usb_writer_task(void *pvParameters)
 
 static int usb_send(const uint8_t *buf, const int size)
 {
-	ESP_LOGD(TAG, "JTAG sending %d bytes to usb_sndbuf", size);
-
 	if (xStreamBufferSend(usb_send_buf.handle, buf, size, pdMS_TO_TICKS(1000)) != size)
 	{
-		ESP_LOGE(TAG,
-		         "Cannot write to usb_sndbuf ringbuffer (free %d of %d)!",
+		ESP_LOGE(USB_TX_TAG,
+		         "Out of space! (free %d of %d)!",
 		         xStreamBufferSpacesAvailable(usb_send_buf.handle),
 		         USB_SNDBUF_SIZE);
 		return 0;
@@ -462,13 +459,13 @@ void __not_in_flash_func(jtag_task)(void *pvParameters)
 
 	if (xTaskCreateAffinitySet(usb_reader_task, "usb_reader_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, uxTaskPriorityGet(NULL) - 1, CORE_AFFINITY_JTAG_TASK, NULL) != pdPASS)
 	{
-		ESP_LOGE(TAG, "Cannot create USB reader task!");
+		ESP_LOGE(JTAG_TASK_TAG, "Cannot create USB reader task!");
 		eub_abort();
 	}
 
 	if (xTaskCreateAffinitySet(usb_writer_task, "usb_send_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, uxTaskPriorityGet(NULL) + 1, CORE_AFFINITY_JTAG_TASK, NULL) != pdPASS)
 	{
-		ESP_LOGE(TAG, "Cannot create USB send task!");
+		ESP_LOGE(JTAG_TASK_TAG, "Cannot create USB send task!");
 		eub_abort();
 	}
 
@@ -512,8 +509,6 @@ void __not_in_flash_func(jtag_task)(void *pvParameters)
 	{
 		cnt = xStreamBufferReceive(usb_recv_buf.handle, nibbles, sizeof(nibbles), portMAX_DELAY);
 		ws2812_set_rgb_state(RGB_LED_STATE_JTAG);
-		ESP_LOGD(TAG, "JTAG processing %d bytes from usb_rcvbuf", cnt);
-		ESP_LOG_BUFFER_HEXDUMP(TAG, nibbles, cnt, ESP_LOG_DEBUG);
 
 		for (size_t n = 0; n < cnt * 2; n++)
 		{
@@ -594,7 +589,7 @@ void __not_in_flash_func(jtag_task)(void *pvParameters)
 				prev_cmd = cmd;
 			}
 		}
-		ESP_LOGD(TAG, "Proccessed %d bytes from usb_rcvbuf", cnt);
+		ESP_LOGD(JTAG_TASK_TAG, "%d bytes", cnt);
 	}
 
 	vTaskDelete(NULL);

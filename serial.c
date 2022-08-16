@@ -52,7 +52,7 @@ typedef struct _uart_dma_tx_t
 }uart_dma_tx_t;
 
 static uart_dma_tx_t uart_dma_tx;
-uint8_t uart_to_cdc_stream_buffer[SLAVE_UART_BUF_SIZE];
+uint8_t uart_to_cdc_stream_buffer[PROG_UART_BUF_SIZE];
 
 static void dma_uart_tx_start(const uint8_t* buf, uint32_t len)
 {
@@ -85,12 +85,12 @@ static void dma_init_uart_tx(void)
 	channel_config_set_transfer_data_size(&c, DMA_SIZE_8);
 	channel_config_set_read_increment(&c, true);
 	channel_config_set_write_increment(&c, false);
-	channel_config_set_dreq(&c, uart_get_dreq(SLAVE_UART_NUM, true));
+	channel_config_set_dreq(&c, uart_get_dreq(PROG_UART, true));
 
 	dma_channel_configure(
 		uart_dma_tx.channel,
 		&c,
-		&uart_get_hw(SLAVE_UART_NUM)->dr, // Write address (only need to set this once)
+		&uart_get_hw(PROG_UART)->dr, // Write address (only need to set this once)
 		NULL,                             // Don't provide a read address yet
 		0,                                // Write the same value many times, then halt and interrupt
 		false                             // Don't start yet
@@ -114,10 +114,10 @@ static void __not_in_flash_func(uart_rx_isr)(void)
 	static uint8_t temp_buffer[16];
 	static uint32_t temp_buffer_len;
 	temp_buffer_len = 0;
-	while (uart_is_readable(SLAVE_UART_NUM))
+	while (uart_is_readable(PROG_UART))
 	{
 
-		temp_buffer[temp_buffer_len++] = uart_getc(SLAVE_UART_NUM);
+		temp_buffer[temp_buffer_len++] = uart_getc(PROG_UART);
 		if (temp_buffer_len == sizeof(temp_buffer))
 		{
 			xStreamBufferSendFromISR(uart_to_cdc_stream_handle, temp_buffer, temp_buffer_len, &higherPriorityTaskWoken);
@@ -303,7 +303,7 @@ static int32_t uart_write_for_loader(const uint8_t* buf, uint32_t len, uint32_t 
 
 static uint32_t uart_set_baudrate_for_loader(uint32_t baudrate)
 {
-	return uart_set_baudrate(SLAVE_UART_NUM, baudrate);
+	return uart_set_baudrate(PROG_UART, baudrate);
 }
 
 static void gpio_set_boot_pin_for_loader(bool val)
@@ -322,7 +322,7 @@ void start_serial_task(void *pvParameters)
 
 
 	// Set up our UART with a basic baud rate.
-	uart_init(SLAVE_UART_NUM, SLAVE_UART_DEFAULT_BAUD);
+	uart_init(PROG_UART, PROG_UART_BITRATE);
 
 	// Set the TX and RX pins by using the function select on the GPIO
 	// Set datasheet for more information on function select
@@ -330,25 +330,25 @@ void start_serial_task(void *pvParameters)
 	gpio_set_function(GPIO_RXD, GPIO_FUNC_UART);
 
 	// Set UART flow control CTS/RTS, we don't want these, so turn them off
-	uart_set_hw_flow(SLAVE_UART_NUM, false, false);
+	uart_set_hw_flow(PROG_UART, false, false);
 
 	// Set our data format
-	uart_set_format(SLAVE_UART_NUM, 8, 1, UART_PARITY_NONE);
+	uart_set_format(PROG_UART, 8, 1, UART_PARITY_NONE);
 
 	// Turn on FIFO's
-	uart_set_fifo_enabled(SLAVE_UART_NUM, true);
+	uart_set_fifo_enabled(PROG_UART, true);
 
 	// Set up a RX interrupt
 	// We need to set up the handler first
 	// Select correct interrupt for the UART we are using
-	int UART_IRQ = SLAVE_UART_NUM == uart0 ? UART0_IRQ : UART1_IRQ;
+	int UART_IRQ = PROG_UART == uart0 ? UART0_IRQ : UART1_IRQ;
 
 	// And set up and enable the interrupt handlers
 	irq_set_exclusive_handler(UART_IRQ, uart_rx_isr);
 
 
 	// Now enable the UART to send interrupts - RX only
-	uart_set_irq_enables(SLAVE_UART_NUM, true, false);
+	uart_set_irq_enables(PROG_UART, true, false);
 
 	irq_set_enabled(UART_IRQ, true);
 
@@ -407,10 +407,10 @@ void serial_set(const bool enable)
 
 bool serial_set_baudrate(uint32_t bit_rate)
 {
-	static uint32_t last_bit_rate = SLAVE_UART_DEFAULT_BAUD;
+	static uint32_t last_bit_rate = PROG_UART_BITRATE;
 	if (last_bit_rate != bit_rate)
 	{
-		uart_set_baudrate(SLAVE_UART_NUM, bit_rate);
+		uart_set_baudrate(PROG_UART, bit_rate);
 		last_bit_rate = bit_rate;
 	}
 

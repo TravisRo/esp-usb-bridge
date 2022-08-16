@@ -10,6 +10,7 @@
 #include "hardware/vreg.h"
 #include "pico.h"
 #include "pico/stdlib.h"
+#include "pico/stdio.h"
 
 /* Scheduler include files. */
 #include "FreeRTOS.h"
@@ -28,6 +29,8 @@
 #include "serial.h"
 #include "msc.h"
 
+#include "pio_uart_logger/pio_uart_logger.h"
+
 #if (CFG_TUSB_OS != OPT_OS_FREERTOS)
 #error "TinyUSB is not using freertos!"
 #endif
@@ -43,12 +46,24 @@ static void tusb_device_task(void *pvParameters)
 
 int main(void)
 {
+	
+#if RP2040_OVERCLOCK_ENABLED
 	vreg_set_voltage(VREG_VOLTAGE_1_15);
 	set_sys_clock_khz(260000, true);
-
+#endif
+	
+	/* board_init is a tinyusb function which mainly just enables UART0 for
+	 * stdio. We are going to use the PIO logger so UART0 can be used for
+	 * the serial programming interface for RP2040 boards that dont provide
+	 * access to UART1 (Seeed XIAO RP2040 for example)
 	board_init();
+	*/
 	init_serial_no();
 
+#if (LOGGING_ENABLED())
+	start_pio_uart_logger(pio0, LOGGER_UART_TX_PIN, LOGGER_UART_BITRATE);
+#endif
+	
 	// init device stack on configured roothub port
 	tud_init(BOARD_TUD_RHPORT);
 

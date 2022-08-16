@@ -1,7 +1,15 @@
-#pragma once
+#ifndef _CONFIG_H
+#define _CONFIG_H
 
 #include <assert.h>
 #include "bsp/board.h"
+
+/* 
+ * RP2040's can generally be over-clocked up to 260mhz without any problems. This
+ * brings our FLASH frequency up to 130mhz which is right at the maximum speed for
+ * W25Q flash ICs (unless it's a really really old one)
+ */
+#define RP2040_OVERCLOCK_ENABLED (1)
 
 /*
  * PICO_DEFAULT_WS2812_PIN is generally defined in the boards header file for those that have it.
@@ -13,27 +21,79 @@
  * If you have a custom board with a WS2812 you can define WS2812_PIN here.
  */
 
-#ifdef PICO_DEFAULT_WS2812_PIN
+#if defined(PICO_DEFAULT_WS2812_PIN) && !defined(WS2812_PIN)
 #define WS2812_PIN PICO_DEFAULT_WS2812_PIN
 #endif
 	
-// pins connected to esp32 target for the serial programming interface
-#define GPIO_BOOT (6)
-#define GPIO_RST (7)
-#define GPIO_TXD (4)
-#define GPIO_RXD (5)
+/* 
+ * Serial Programming Interface PIN assignments
+ * NOTE: These can also be set with a project define or from the
+ * make command line.
+ */ 
 
-// pins connected to esp32 target for the JTAG debugging interface
+#ifndef GPIO_BOOT
+#define GPIO_BOOT (6)
+#endif
+
+#ifndef GPIO_RST
+#define GPIO_RST (7)
+#endif
+
+#ifndef GPIO_TXD
+#define GPIO_TXD (4)
+#endif
+
+#ifndef GPIO_RXD
+#define GPIO_RXD (5)
+#endif
+////////////////////////////////////////////////////////////////////
+
+/* 
+ * Serial Programming Interface UART
+ * NOTE: These can also be set with a project define or from the
+ * make command line.
+ */ 
+
+/* Some dev boards don't route out uart1 pins in which case you can
+ * use uart0 and change GPIO_TXD, GPIO_RXD accordingly.
+ */
+#ifndef PROG_UART
+#define PROG_UART			uart1
+#endif
+
+#ifndef PROG_UART_BUF_SIZE
+#define PROG_UART_BUF_SIZE	(2 * 1024)
+#endif
+
+#ifndef PROG_UART_BITRATE
+#define PROG_UART_BITRATE	115200
+#endif
+
+
+/* 
+ * JTAG debugging Interface PIN assignments
+ * NOTE: These can also be set with a project define or from the
+ * make command line.
+ */ 
+#ifndef GPIO_TCK
 #define GPIO_TCK (29)
+#endif
+
+#ifndef GPIO_TDI
 #define GPIO_TDI (27)
+#endif
+
+#ifndef GPIO_TMS
 #define GPIO_TMS (28)
+#endif
+
+#ifndef GPIO_TDO
 #define GPIO_TDO (14)
+#endif
+
+////////////////////////////////////////////////////////////////////
 
 _Static_assert(GPIO_TMS == GPIO_TDI+1, "TDI and TMS pins must be sequential! EG: If TDI=27 then TMS must be 28");
-
-#define SLAVE_UART_NUM          uart1
-#define SLAVE_UART_BUF_SIZE     (2 * 1024)
-#define SLAVE_UART_DEFAULT_BAUD 115200
 
 #define CONFIG_BRIDGE_MSC_VOLUME_LABEL "ESPPROG_MSC"
 
@@ -41,6 +101,7 @@ _Static_assert(GPIO_TMS == GPIO_TDI+1, "TDI and TMS pins must be sequential! EG:
 
 #define CORE_AFFINITY_USB_TASK (2)
 #define CORE_AFFINITY_WS2812_TASK (2)
+#define CORE_AFFINITY_LOGGER_TASK (2)
 #define CORE_AFFINITY_JTAG_TASK (1)
 #define CORE_AFFINITY_SERIAL_TASK (1)
 #define CORE_AFFINITY_MSC_TASK (1)
@@ -60,5 +121,45 @@ typedef enum
 // espressif uses a uint8_t StackType_t in there freertos port.  Most everyone else uses a uint32_t
 #define STACK_SIZE_FROM_BYTES(stackSizeInBytes) ((stackSizeInBytes)/sizeof(StackType_t))
 
-#define eub_abort() do{ printf("eub_abort!!\r\n"); }while(1)
+#define eub_abort() do{ printf("eub_abort!!\r\n"); for(;;); }while(1)
 
+// Log level defines (higher is more logging)
+#define ESP_LOG_NONE	(-1)
+#define ESP_LOG_ERROR	(0)
+#define ESP_LOG_WARN	(1)
+#define ESP_LOG_INFO	(2)
+#define ESP_LOG_DEBUG	(3)
+#define ESP_LOG_VERBOSE	(4)
+
+/*
+ * PIO UART logger UART TX pin.
+ * 
+ * This can be ANY unused pin since it doesn't use an actual UART peripheral.
+ * NOTE: These can also be set with a project define or from the
+ * make command line.
+ */
+
+#ifndef LOGGER_UART_TX_PIN
+#define LOGGER_UART_TX_PIN	(0)
+#endif
+
+/* 
+ * NOTE: This may be to high for some serial ICs!
+ * I use a CH340G for logging and 1.5M works better than 921600.
+ * Presumably, the CH340G osc can hit 1.5M with 0% error.
+ */
+#ifndef LOGGER_UART_BITRATE
+#define LOGGER_UART_BITRATE	(1500000)
+#endif
+
+/*
+ * Only show warning and errors by default
+ */
+#ifndef LOG_LEVEL
+#define LOG_LEVEL (ESP_LOG_WARN)
+#endif
+////////////////////////////////////////////////////////////////////
+
+#define LOGGING_ENABLED() (LOG_LEVEL > ESP_LOG_NONE)
+
+#endif
