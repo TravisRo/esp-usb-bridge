@@ -122,6 +122,8 @@ static void pio_uart_logger_task(void* p)
 	uint buf_index = 0;
 	size_t minSpaceAvail = UINT32_MAX;
 	logger.is_ready = true;
+	printf("welcome to esp-usb-bridge-pico programmer and debugger!\r\n\tBy Travis Robinson (libusbdotnet@gmail.com)\r\n");
+
 	for (;;)
 	{
 		size_t len = xStreamBufferReceive(logger.stream_handle, temp_buffer[buf_index], sizeof(temp_buffer[0]), portMAX_DELAY /* pdMS_TO_TICKS(5000) */);
