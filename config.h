@@ -4,6 +4,9 @@
 #include <assert.h>
 #include "bsp/board.h"
 
+#define FWVER_MAJOR (0)
+#define FWVER_MINOR (2)
+
 /* 
  * RP2040's can generally be over-clocked up to 260mhz without any problems. This
  * brings our FLASH frequency up to 130mhz which is right at the maximum speed for

@@ -122,7 +122,7 @@ static void pio_uart_logger_task(void* p)
 	uint buf_index = 0;
 	size_t minSpaceAvail = UINT32_MAX;
 	logger.is_ready = true;
-	printf("welcome to esp-usb-bridge-pico programmer and debugger!\r\n\tBy Travis Robinson (libusbdotnet@gmail.com)\r\n");
+	printf("welcome to esp-usb-bridge-pico programmer and debugger v%u.%u!\r\n\tBy Travis Robinson (libusbdotnet@gmail.com)\r\n", FWVER_MAJOR, FWVER_MINOR);
 
 	for (;;)
 	{
