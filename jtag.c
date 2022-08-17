@@ -307,12 +307,13 @@ static void usb_writer_task(void *pvParameters)
 			{
 				xSemaphoreTake(usb_send_buf.sem_can_transfer_handle, portMAX_DELAY);
 			}
+			
 			const int sent = tud_vendor_n_write(0, local_buf + transferred, MIN(space, to_send));
 			transferred += sent;
 			to_send -= sent;
 			// there seems to be no flush for vendor class
+			tud_vendor_n_flush(0);
 		}
-		tud_vendor_n_flush(0);
 	}
 	vTaskDelete(NULL);
 }
