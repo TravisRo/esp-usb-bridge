@@ -99,7 +99,7 @@ _Static_assert(GPIO_TMS == GPIO_TDI+1, "TDI and TMS pins must be sequential! EG:
 
 #define GET_BYTE(n, b)          (((n) >> ((b) * 8)) & 0xFF)
 
-#define CORE_AFFINITY_USB_TASK (2)
+#define CORE_AFFINITY_USB_TASK (1)
 #define CORE_AFFINITY_WS2812_TASK (2)
 #define CORE_AFFINITY_LOGGER_TASK (2)
 #define CORE_AFFINITY_JTAG_TASK (1)
