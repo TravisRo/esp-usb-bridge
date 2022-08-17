@@ -124,7 +124,7 @@ static void pio_uart_logger_task(void* p)
 	logger.is_ready = true;
 	for (;;)
 	{
-		size_t len = xStreamBufferReceive(logger.stream_handle, temp_buffer[buf_index], sizeof(temp_buffer[0]), pdMS_TO_TICKS(5000));
+		size_t len = xStreamBufferReceive(logger.stream_handle, temp_buffer[buf_index], sizeof(temp_buffer[0]), portMAX_DELAY /* pdMS_TO_TICKS(5000) */);
 		if (len)
 		{
 			size_t spaceAvail = xStreamBufferSpacesAvailable(logger.stream_handle);
