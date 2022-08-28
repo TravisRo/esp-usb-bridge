@@ -54,6 +54,24 @@ typedef struct _uart_dma_tx_t
 static uart_dma_tx_t uart_dma_tx;
 uint8_t uart_to_cdc_stream_buffer[PROG_UART_BUF_SIZE];
 
+static inline void set_esp_pin(uint pin, bool val)
+{
+	if (val)
+	{
+		// set to input, enable pullup
+		gpio_put(pin, true);
+		gpio_set_dir(pin, true);
+		gpio_set_pulls(pin, true, false);
+		gpio_set_dir(pin, false);
+	}
+	else
+	{
+		// set low, set to output
+		gpio_put(pin, false);
+		gpio_set_dir(pin, true);
+	}
+}
+
 static void dma_uart_tx_start(const uint8_t* buf, uint32_t len)
 {
 	dma_channel_set_read_addr(uart_dma_tx.channel, buf, false);
@@ -189,8 +207,9 @@ void tud_cdc_line_coding_cb(const uint8_t itf, cdc_line_coding_t const *p_line_c
 static int64_t state_change_timer_cb(alarm_id_t id, void *user_data)
 {
 	ESP_LOGI(TAG, "BOOT = 1, RST = 1");
-	gpio_set_mask((1 << GPIO_BOOT) | (1 << GPIO_RST));
-	state_change_timer = -1;
+	set_esp_pin(GPIO_BOOT, true);
+	set_esp_pin(GPIO_RST, true);
+state_change_timer = -1;
 	ws2812_set_rgb_state_isr(RGB_LED_STATE_PROG_B1_R1);
 
 	return 0;
@@ -249,8 +268,8 @@ void tud_cdc_line_state_cb(const uint8_t itf, const bool dtr, const bool rts)
 		else if (!boot && !rst)
 			ws2812_set_rgb_state(RGB_LED_STATE_PROG_B0_R0);
 		
-		gpio_put(GPIO_BOOT, boot);
-		gpio_put(GPIO_RST, rst);
+		set_esp_pin(GPIO_BOOT, boot);
+		set_esp_pin(GPIO_RST, rst);
 
 #ifdef DISABLED
 		// On ESP32, TDI jtag signal is on GPIO12, which is also a strapping pin that determines flash voltage.
@@ -308,11 +327,12 @@ static uint32_t uart_set_baudrate_for_loader(uint32_t baudrate)
 
 static void gpio_set_boot_pin_for_loader(bool val)
 {
-	gpio_put(GPIO_BOOT, val);
+	set_esp_pin(GPIO_BOOT, val);
 }
+
 static void gpio_set_rst_pin_for_loader(bool val)
 {
-	gpio_put(GPIO_RST, val);
+	set_esp_pin(GPIO_RST, val);
 }
 
 void start_serial_task(void *pvParameters)
@@ -358,10 +378,8 @@ void start_serial_task(void *pvParameters)
 	//gpio_set_drive_strength(GPIO_BOOT, GPIO_DRIVE_STRENGTH_2MA);
 	//gpio_set_drive_strength(GPIO_RST, GPIO_DRIVE_STRENGTH_2MA);
 
-	gpio_set_dir_out_masked((1 << GPIO_BOOT) | (1 << GPIO_RST));
-	gpio_set_pulls(GPIO_BOOT, true, false);
-	gpio_set_pulls(GPIO_RST, true, false);
-	gpio_set_mask((1 << GPIO_BOOT) | (1 << GPIO_RST));
+	set_esp_pin(GPIO_BOOT, true);
+	set_esp_pin(GPIO_RST, true);
 
 	serial_init_finished = true;
 	serial_read_enabled = true;
@@ -393,7 +411,7 @@ void serial_set(const bool enable)
 			vTaskResume(uart_to_cdc_task_handle);
 			vTaskResume(cdc_to_uart_task_handle);
 			serial_read_enabled = true;
-			ws2812_set_rgb_state(RGB_LED_STATE_MSC_END);
+			ws2812_set_rgb_state(RGB_LED_STATE_END);
 		}
 		else
 		{
