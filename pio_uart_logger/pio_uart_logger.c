@@ -107,8 +107,11 @@ static void stdio_pio_init(void)
 		.crlf_enabled = false
 #endif
 	};
-	
+#if LOGGER_UART_STOPBITS==1
 	uint offset = pio_add_program(logger.pio, &uart_tx_program);
+#else
+	uint offset = pio_add_program(logger.pio, &uart_tx_2_stop_bits_program);
+#endif
 	uart_tx_program_init(logger.pio, logger.sm, offset, logger.pin, logger.bit_rate);
 
 	stdio_set_driver_enabled(&logger_drv, true);

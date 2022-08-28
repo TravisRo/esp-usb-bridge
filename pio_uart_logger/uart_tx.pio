@@ -3,6 +3,18 @@
 ;
 ; SPDX-License-Identifier: BSD-3-Clause
 ;
+.program uart_tx_2_stop_bits
+.side_set 1 opt
+
+; An 8n1 UART transmit program.
+; OUT pin 0 and side-set pin 0 are both mapped to UART TX pin.
+
+    pull       side 1 [7]  ; Assert stop bits, or stall with line in idle state
+    nop        side 1 [7]  ; 
+    set x, 7   side 0 [7]  ; Preload bit counter, assert start bit for 8 clocks
+bitloop:                   ; This loop will run 8 times (8n1 UART)
+    out pins, 1            ; Shift 1 bit from OSR to the first OUT pin
+    jmp x-- bitloop   [6]  ; Each loop iteration is 8 cycles.
 
 .program uart_tx
 .side_set 1 opt
@@ -19,6 +31,7 @@ bitloop:                   ; This loop will run 8 times (8n1 UART)
 
 % c-sdk {
 #include "hardware/clocks.h"
+#include "config.h"
 
 static inline void uart_tx_program_init(PIO pio, uint sm, uint offset, uint pin_tx, uint baud) {
     // Tell PIO to initially drive output-high on the selected pin, then map PIO
@@ -27,7 +40,11 @@ static inline void uart_tx_program_init(PIO pio, uint sm, uint offset, uint pin_
     pio_sm_set_pindirs_with_mask(pio, sm, 1u << pin_tx, 1u << pin_tx);
     pio_gpio_init(pio, pin_tx);
 
-    pio_sm_config c = uart_tx_program_get_default_config(offset);
+#if defined(LOGGER_UART_STOPBITS) && LOGGER_UART_STOPBITS==2
+	pio_sm_config c = uart_tx_2_stop_bits_program_get_default_config(offset);
+#else
+	pio_sm_config c = uart_tx_program_get_default_config(offset);
+#endif
 
     // OUT shifts to right, no autopull
     sm_config_set_out_shift(&c, true, false, 32);
