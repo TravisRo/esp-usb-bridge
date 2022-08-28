@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.12)
-# TODO:
-# Set your custom board here
-# set(PICO_BOARD pico)
-# set(PICO_BOARD tzt_rgb_usbc_rp2040)
-# set(PICO_BOARD waveshare_rp2040_zero)
+if (NOT PICO_BOARD)
+    # TODO:
+    # Set your custom board here
+    # set(PICO_BOARD pico)
+    # set(PICO_BOARD tzt_rgb_usbc_rp2040)
+    set(PICO_BOARD waveshare_rp2040_zero)
+endif()
 
 # TODO:
 # For this to work properly, PicoSDK\1.3.0-Package\lib\tinyusb\hw\bsp\rp2040\family.cmake needs a small patch:
@@ -81,6 +83,10 @@ target_link_libraries(dev_usbbridge_jtag PUBLIC pico_stdlib pico_stdio hardware_
 
 # Disable the STDOUT mutex and CRLF support since we are handling them ourself in the pio_uart_logger
 target_compile_definitions(dev_usbbridge_jtag PUBLIC PICO_STDOUT_MUTEX=0 PICO_STDIO_ENABLE_CRLF_SUPPORT=0)
+
+if (USER_COMPILE_DEFINES)
+    target_compile_definitions(dev_usbbridge_jtag PUBLIC ${USER_COMPILE_DEFINES})
+endif()
 
 pico_add_extra_outputs(dev_usbbridge_jtag)
 add_custom_command(TARGET ${TARGET} POST_BUILD
