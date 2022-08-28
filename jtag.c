@@ -508,8 +508,8 @@ void __not_in_flash_func(jtag_task)(void *pvParameters)
 
 	while (1)
 	{
+		bool was_reset = false;
 		cnt = xStreamBufferReceive(usb_recv_buf.handle, nibbles, sizeof(nibbles), portMAX_DELAY);
-		ws2812_set_rgb_state(RGB_LED_STATE_JTAG);
 
 		for (size_t n = 0; n < cnt * 2; n++)
 		{
@@ -528,9 +528,11 @@ void __not_in_flash_func(jtag_task)(void *pvParameters)
 				break;
 			case CMD_SRST0:          // JTAG Tap reset command is not expected from host but still we are ready
 				cmd_rpt_cnt = 8; // 8 TMS=1 is more than enough to return the TAP state to RESET
+				was_reset = true;
 				break;
 			case CMD_SRST1:          // FIXME: system reset may cause an issue during openocd examination
 				cmd_rpt_cnt = 8; // for now this is also used for the tap reset
+				was_reset = true;
 				// gpio_put(GPIO_RST, 0);
 				// ets_delay_us(100);
 				// gpio_put(GPIO_RST, 1);
@@ -591,6 +593,14 @@ void __not_in_flash_func(jtag_task)(void *pvParameters)
 			}
 		}
 		ESP_LOGD(JTAG_TASK_TAG, "%d bytes", cnt);
+		if (was_reset)
+		{
+			ws2812_set_rgb_state(RGB_LED_STATE_END);
+		}
+		else
+		{
+			ws2812_set_rgb_state(RGB_LED_STATE_JTAG);
+		}
 	}
 
 	vTaskDelete(NULL);
