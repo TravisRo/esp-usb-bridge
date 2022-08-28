@@ -6,7 +6,6 @@
 #ifndef _WS2812_H_
 #define _WS2812_H_
 
-extern TaskHandle_t g_ws2812_task_handle;
 typedef enum _RGB_LED_STATE
 {
 	RGB_LED_STATE_STARTUP,
@@ -16,7 +15,7 @@ typedef enum _RGB_LED_STATE
 	RGB_LED_STATE_PROG_B1_R0,
 	RGB_LED_STATE_PROG_B0_R0,
 	RGB_LED_STATE_MSC_START,
-	RGB_LED_STATE_MSC_END,
+	RGB_LED_STATE_END,
 	RGB_LED_STATE_COLOR_MASK        = 0xFF,
 
 	RGB_LED_STATE_SET_PERSISTENT    = 0x100,
@@ -33,17 +32,21 @@ typedef struct _LED_COLOR_T
 }LED_COLOR_T;
 
 #if (defined(WS2812_PIN))
+
+extern TaskHandle_t g_ws2812_task_handle;
+extern RGB_LED_STATE g_last_led_val;
+
 void ws2812_pio_init(PIO pio);
 void ws2812_start_task(void);
 
 void __always_inline ws2812_set_rgb_state(RGB_LED_STATE state)
 {
-	if (g_ws2812_task_handle) 
+	if (g_ws2812_task_handle && g_last_led_val != state) 
 		xTaskNotify(g_ws2812_task_handle, state, eSetValueWithOverwrite);
 }
 void __always_inline ws2812_set_rgb_state_isr(RGB_LED_STATE state)
 {
-	if(g_ws2812_task_handle) 
+	if (g_ws2812_task_handle && g_last_led_val != state) 
 	{
 		BaseType_t higherPriorityTaskWoken;
 		xTaskNotifyFromISR(g_ws2812_task_handle, state, eSetValueWithOverwrite, &higherPriorityTaskWoken);
