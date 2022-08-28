@@ -5,7 +5,7 @@
 #include "bsp/board.h"
 
 #define FWVER_MAJOR (0)
-#define FWVER_MINOR (2)
+#define FWVER_MINOR (3)
 
 /* 
  * RP2040's can generally be over-clocked up to 260mhz without any problems. This
@@ -144,6 +144,15 @@ typedef enum
 
 #ifndef LOGGER_UART_TX_PIN
 #define LOGGER_UART_TX_PIN	(0)
+#endif
+
+/* 
+ * NOTE: Since by default we are running the logger uart rate really fast (1.5M),
+ * we are using 2 stop bits. If you lower the baudrate, you may want to decrease
+ * this to 1 for slightly faster logging.
+ */
+#ifndef LOGGER_UART_STOPBITS
+#define LOGGER_UART_STOPBITS	(2)
 #endif
 
 /* 
