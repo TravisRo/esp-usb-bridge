@@ -16,7 +16,7 @@
 #include "task.h"
 #include "jtag.h"
 #include "tusb.h"
-#include "config.h"
+#include "ubp_config.h"
 #include "hardware/gpio.h"
 #include "pico/time.h"
 #include "generated/jtag.pio.h"

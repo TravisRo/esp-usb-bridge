@@ -33,7 +33,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "config.h"
+#include "ubp_config.h"
 #include "esp_log.h"
 #include "esp_err.h"
 #include "tusb.h"
@@ -505,3 +505,4 @@ void msc_task(void *pvParameters)
 	         sizeof(msc_disk_root_directory_sector0) + sizeof(msc_disk_readme_sector0));
 	vTaskDelete(NULL);
 }
+

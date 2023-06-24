@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "config.h"
+#include "ubp_config.h"
 #include "bsp/board.h"
 #include "tusb.h"
 #include "usb_descriptors.h"
@@ -71,7 +71,9 @@ int main(void)
 	ws2812_start_task();
 
 	xTaskCreateAffinitySet(tusb_device_task, "tusb_device_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, 5, CORE_AFFINITY_USB_TASK, NULL);
+#if MSC_ENABLED
 	xTaskCreateAffinitySet(msc_task, "msc_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, 5, CORE_AFFINITY_MSC_TASK, NULL);
+#endif
 	xTaskCreateAffinitySet(start_serial_task, "start_serial_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, 5, CORE_AFFINITY_SERIAL_TASK, NULL);
 	xTaskCreateAffinitySet(jtag_task, "jtag_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, 5, CORE_AFFINITY_JTAG_TASK, NULL);
 	

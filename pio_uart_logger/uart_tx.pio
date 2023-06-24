@@ -31,7 +31,7 @@ bitloop:                   ; This loop will run 8 times (8n1 UART)
 
 % c-sdk {
 #include "hardware/clocks.h"
-#include "config.h"
+#include "ubp_config.h"
 
 static inline void uart_tx_program_init(PIO pio, uint sm, uint offset, uint pin_tx, uint baud) {
     // Tell PIO to initially drive output-high on the selected pin, then map PIO

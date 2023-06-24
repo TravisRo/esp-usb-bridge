@@ -28,19 +28,26 @@
 #include "usb_descriptors.h"
 #include "pico/unique_id.h"
 #include "jtag.h"
+#include "ubp_config.h"
 
 #define EPNUM_CDC       2
 #define EPNUM_VENDOR    3
 #define EPNUM_MSC       4
 
 
+#if MSC_ENABLED
 #define TUSB_DESC_TOTAL_LEN (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_VENDOR_DESC_LEN + TUD_MSC_DESC_LEN)
+#else
+#define TUSB_DESC_TOTAL_LEN (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_VENDOR_DESC_LEN)
+#endif
 
 enum {
 	ITF_NUM_CDC = 0,
 	ITF_NUM_CDC_DATA,
 	ITF_NUM_VENDOR,
+#if MSC_ENABLED
 	ITF_NUM_MSC,
+#endif
 	ITF_NUM_TOTAL
 };
 
@@ -90,8 +97,10 @@ static uint8_t const desc_configuration[] = {
 	// Interface number, string index, EP Out & IN address, EP size
 	TUD_VENDOR_EUB_DESCRIPTOR(ITF_NUM_VENDOR, 5, EPNUM_VENDOR, 0x80 | EPNUM_VENDOR, 64),
 
+#if MSC_ENABLED
 	// Interface number, string index, EP Out & EP In address, EP size
 	TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 6, EPNUM_MSC, 0x80 | EPNUM_MSC, 64),
+#endif
 };
 
 static char serial_descriptor[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1] = { '\0' }; // 2 chars per hexnumber + '\0'

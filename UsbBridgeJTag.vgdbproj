@@ -70,9 +70,10 @@
       <EnableFastUpToDateCheck>true</EnableFastUpToDateCheck>
       <Extension xsi:type="com.visualgdb.project.external.raspberry_pi.pico.extension.cmake">
         <SDK>
-          <Source>Package</Source>
-          <Version>1.3.0</Version>
+          <Source>Manual</Source>
+          <Version>1.4.0</Version>
         </SDK>
+        <Configuration />
         <UnoptimizeDebugBuilds>true</UnoptimizeDebugBuilds>
       </Extension>
     </ProjectModeSettings>

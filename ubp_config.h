@@ -1,5 +1,5 @@
-#ifndef _CONFIG_H
-#define _CONFIG_H
+#ifndef _UBP_CONFIG_H
+#define _UBP_CONFIG_H
 
 #include <assert.h>
 #include "bsp/board.h"
@@ -168,10 +168,13 @@ typedef enum
  * Only show warning and errors by default
  */
 #ifndef LOG_LEVEL
-#define LOG_LEVEL (ESP_LOG_WARN)
+#define LOG_LEVEL (ESP_LOG_NONE)
 #endif
 ////////////////////////////////////////////////////////////////////
 
 #define LOGGING_ENABLED() (LOG_LEVEL > ESP_LOG_NONE)
 
+#ifndef MSC_ENABLED
+#define MSC_ENABLED 0
+#endif
 #endif

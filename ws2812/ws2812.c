@@ -9,7 +9,7 @@
 #include <stdlib.h>
 
 #include "ws2812.h"
-#include "config.h"
+#include "ubp_config.h"
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
 #include "hardware/clocks.h"

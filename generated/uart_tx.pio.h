@@ -71,7 +71,7 @@ static inline pio_sm_config uart_tx_program_get_default_config(uint offset) {
 }
 
 #include "hardware/clocks.h"
-#include "config.h"
+#include "ubp_config.h"
 static inline void uart_tx_program_init(PIO pio, uint sm, uint offset, uint pin_tx, uint baud) {
     // Tell PIO to initially drive output-high on the selected pin, then map PIO
     // onto that pin with the IO muxes.
