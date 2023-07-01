@@ -22,43 +22,43 @@
 #define IS_RGBW true
 
 static LED_COLOR_T _ledStateStartup[] = {
-	{ 50, 0, 0, 10 },		// RED
-	{ 0, 0, 0, 10 },		// BLACK
+	{ 50, 0, 0, 10 },  // RED
+	{ 0, 0, 0, 10 },   // BLACK
 	{ 0, 0, 0, 0 }
 };
 static LED_COLOR_T _ledStateJTAG[] = {
-	{ 0, 50, 0, 2 },		// GREEN
-	{ 0, 0, 60, 2 },		// BLUE
+	{ 0, 50, 0, 2 },   // GREEN
+	{ 0, 0, 60, 2 },   // BLUE
 	{ 0, 0, 0, 0 }
 };
 
 static LED_COLOR_T _ledStatePROG_B1R1[] = {
-	{ 0, 50, 0, 10 },		// GREEN
+	{ 0, 50, 0, 10 },  // GREEN
 	{ 0, 0, 0, 0 }
 };
 
 static LED_COLOR_T _ledStatePROG_B1R0[] = {
-	{ 50, 0, 0, 10 },		// RED
+	{ 50, 0, 0, 10 },  // RED
 	{ 0, 0, 0, 0 }
 };
 
 static LED_COLOR_T _ledStatePROG_B0R1[] = {
-	{ 0, 0, 60, 10 },		// BLUE
+	{ 0, 0, 60, 10 },  // BLUE
 	{ 0, 0, 0, 0 }
 };
 
 static LED_COLOR_T _ledStatePROG_B0R0[] = {
-	{ 50, 25, 0, 10 },	// ORANGE
+	{ 50, 25, 0, 10 }, // ORANGE
 	{ 0, 0, 0, 0 }
 };
 
 static LED_COLOR_T _ledStateMSC_Start[] = {
-	{ 37, 0, 50, 10 },	// PURPLE
+	{ 37, 0, 50, 10 }, // PURPLE
 	{ 0, 0, 0, 0 }
 };
 
 static LED_COLOR_T _ledStateMSC_End[] = {
-	{ 0, 50, 0, 10 },		// GREEN
+	{ 0, 50, 0, 10 },  // GREEN
 	{ 0, 0, 0, 0 }
 };
 
@@ -73,7 +73,7 @@ static inline void put_pixel(uint32_t pixel_grb)
 	pio_sm_put_blocking(_pio_ws2812, _sm_ws2812, pixel_grb << 8u);
 }
 
-static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) 
+static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b)
 {
 	return ((uint32_t) (r) << 8) | ((uint32_t) (g) << 16) | (uint32_t) (b);
 }
@@ -102,14 +102,14 @@ static void ws2812_task(void * pvParameters)
 	TickType_t nextLedServiceTickTime;
 	RGB_LED_STATE currentState = RGB_LED_STATE_STARTUP;
 	RGB_LED_STATE lastNonPersistentState = RGB_LED_STATE_STARTUP;
-	
+
 	nextLedServiceTickTime =  xTaskGetTickCount() + pdMS_TO_TICKS(100);
-	
+
 	for (;;)
 	{
 		TickType_t tickTime = xTaskGetTickCount();
 		TickType_t nextServiceTime = nextLedServiceTickTime;
-		
+
 		if (tickTime >= nextServiceTime)
 		{
 			ticksToWait = 1;
@@ -122,11 +122,11 @@ static void ws2812_task(void * pvParameters)
 		tickTime = xTaskGetTickCount();
 		if (change_state == pdTRUE)
 		{
-			g_last_led_val = (RGB_LED_STATE)notificationValue ;
+			g_last_led_val = (RGB_LED_STATE)notificationValue;
 			bool allowColorChange = true;
 			if (notificationValue & (RGB_LED_STATE_COLOR_MASK | RGB_LED_STATE_PERSISTENT_MASK))
 			{
-				
+
 				RGB_LED_STATE newState = notificationValue & (RGB_LED_STATE_COLOR_MASK | RGB_LED_STATE_PERSISTENT_MASK);
 				if ((currentState & RGB_LED_STATE_SET_PERSISTENT) && !(newState & RGB_LED_STATE_PERSISTENT_MASK))
 				{
@@ -181,21 +181,21 @@ static void ws2812_task(void * pvParameters)
 						headLedColor = _ledStateMSC_End;
 						nextLedColor = headLedColor;
 						break;
-					default :
+					default:
 						break;
 					}
-					
+
 					currentState = newState;
 				}
 			}
 		}
-		
+
 		// Service the RGB led
 		if (tickTime >= nextLedServiceTickTime)
 		{
 			if (nextLedColor->Delay100ms == 0)
 				nextLedColor = headLedColor;
-			
+
 			nextLedServiceTickTime = tickTime + pdMS_TO_TICKS((uint32_t)nextLedColor->Delay100ms * 100);
 			ws2812_put_pixel(nextLedColor->r, nextLedColor->g, nextLedColor->b);
 			nextLedColor++;

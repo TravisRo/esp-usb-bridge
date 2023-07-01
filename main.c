@@ -46,24 +46,24 @@ static void tusb_device_task(void *pvParameters)
 
 int main(void)
 {
-	
+
 #if RP2040_OVERCLOCK_ENABLED
 	vreg_set_voltage(VREG_VOLTAGE_1_15);
 	set_sys_clock_khz(260000, true);
 #endif
-	
+
 	/* board_init is a tinyusb function which mainly just enables UART0 for
 	 * stdio. We are going to use the PIO logger so UART0 can be used for
 	 * the serial programming interface for RP2040 boards that dont provide
 	 * access to UART1 (Seeed XIAO RP2040 for example)
-	board_init();
-	*/
+	   board_init();
+	 */
 	init_serial_no();
 
 #if (LOGGING_ENABLED())
 	start_pio_uart_logger(pio0, LOGGER_UART_TX_PIN, LOGGER_UART_BITRATE);
 #endif
-	
+
 	// init device stack on configured roothub port
 	tud_init(BOARD_TUD_RHPORT);
 
@@ -75,9 +75,10 @@ int main(void)
 	xTaskCreateAffinitySet(msc_task, "msc_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, 5, CORE_AFFINITY_MSC_TASK, NULL);
 #endif
 	xTaskCreateAffinitySet(start_serial_task, "start_serial_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, 5, CORE_AFFINITY_SERIAL_TASK, NULL);
+#if JTAG_ENABLED
 	xTaskCreateAffinitySet(jtag_task, "jtag_task", STACK_SIZE_FROM_BYTES(4 * 1024), NULL, 5, CORE_AFFINITY_JTAG_TASK, NULL);
-	
-	
+#endif
+
 	vTaskStartScheduler();
 
 	for (;;);

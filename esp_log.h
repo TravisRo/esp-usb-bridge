@@ -7,7 +7,7 @@
 
 #if (LOGGING_ENABLED())
 #define ESP_LOG_LEVEL_LOCAL(level, tag, format, ...) do {                                               \
-	if (level <= LOG_LEVEL) printf("[%s] " format LOG_NL, tag, ## __VA_ARGS__); \
+		if (level <= LOG_LEVEL) printf("[%s] " format LOG_NL, tag, ## __VA_ARGS__); \
 }while(0)
 #else
 #define ESP_LOG_LEVEL_LOCAL(level, tag, format, ...)
@@ -20,4 +20,3 @@
 #define ESP_LOGV( tag, format, ... ) ESP_LOG_LEVEL_LOCAL(ESP_LOG_VERBOSE, tag, format, ## __VA_ARGS__)
 #define ESP_LOG_BUFFER_HEXDUMP(tag,buf,size,level)
 #endif
-	

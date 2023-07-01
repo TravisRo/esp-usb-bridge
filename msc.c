@@ -505,4 +505,4 @@ void msc_task(void *pvParameters)
 	         sizeof(msc_disk_root_directory_sector0) + sizeof(msc_disk_readme_sector0));
 	vTaskDelete(NULL);
 }
-
+

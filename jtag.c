@@ -11,12 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#include "ubp_config.h"
+#if JTAG_ENABLED
 #include "esp_log.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "jtag.h"
 #include "tusb.h"
-#include "ubp_config.h"
 #include "hardware/gpio.h"
 #include "pico/time.h"
 #include "generated/jtag.pio.h"
@@ -96,7 +97,7 @@ typedef struct _jtag_context_t
 #define TCK_FREQ(khz) ((khz * 2) / 10)
 #define TCK_FREQ_HZ_FROM_DIV(div)((float)JTAG_BASE_FREQ_HZ/(div))
 
-static const jtag_proto_caps_t jtag_proto_caps = 
+static const jtag_proto_caps_t jtag_proto_caps =
 {
 	{ .proto_ver = JTAG_PROTO_CAPS_VER, .length = sizeof(jtag_proto_caps_hdr_t) + sizeof(jtag_proto_caps_speed_apb_t) },
 	{ .type = JTAG_PROTO_CAPS_SPEED_APB_TYPE, .length = sizeof(jtag_proto_caps_speed_apb_t), .apb_speed_10khz = TCK_FREQ(JTAG_BASE_FREQ_HZ / 1000), .div_min = 1, .div_max = 200 }
@@ -307,7 +308,7 @@ static void usb_writer_task(void *pvParameters)
 			{
 				xSemaphoreTake(usb_send_buf.sem_can_transfer_handle, portMAX_DELAY);
 			}
-			
+
 			const int sent = tud_vendor_n_write(0, local_buf + transferred, MIN(space, to_send));
 			transferred += sent;
 			to_send -= sent;
@@ -605,3 +606,4 @@ void __not_in_flash_func(jtag_task)(void *pvParameters)
 
 	vTaskDelete(NULL);
 }
+#endif

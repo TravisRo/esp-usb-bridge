@@ -144,10 +144,12 @@ uint16_t const *tud_descriptor_string_cb(const uint8_t index, const uint16_t lan
 		memcpy(&_desc_str[1], string_desc_arr[0], 2);
 		chr_count = 1;
 	}
+#if JTAG_ENABLED
 	else if (index == JTAG_STR_DESC_INX)
 	{
 		chr_count = jtag_get_proto_caps(&_desc_str[1]) / 2;
 	}
+#endif
 	else
 	{
 		// Convert ASCII string into UTF-16

@@ -26,7 +26,7 @@ typedef enum _RGB_LED_STATE
 typedef struct _LED_COLOR_T
 {
 	uint8_t r;
-	uint8_t g; 
+	uint8_t g;
 	uint8_t b;
 	uint8_t Delay100ms;
 }LED_COLOR_T;
@@ -41,12 +41,12 @@ void ws2812_start_task(void);
 
 void __always_inline ws2812_set_rgb_state(RGB_LED_STATE state)
 {
-	if (g_ws2812_task_handle && g_last_led_val != state) 
+	if (g_ws2812_task_handle && g_last_led_val != state)
 		xTaskNotify(g_ws2812_task_handle, state, eSetValueWithOverwrite);
 }
 void __always_inline ws2812_set_rgb_state_isr(RGB_LED_STATE state)
 {
-	if (g_ws2812_task_handle && g_last_led_val != state) 
+	if (g_ws2812_task_handle && g_last_led_val != state)
 	{
 		BaseType_t higherPriorityTaskWoken;
 		xTaskNotifyFromISR(g_ws2812_task_handle, state, eSetValueWithOverwrite, &higherPriorityTaskWoken);

@@ -30,6 +30,7 @@
 #include "components/esp_loader/port/rp2040_port.h"
 #include "stream_buffer.h"
 #include "ws2812.h"
+#include "hardware/adc.h"
 
 static const char *TAG = "bridge_serial";
 
@@ -109,9 +110,9 @@ static void dma_init_uart_tx(void)
 		uart_dma_tx.channel,
 		&c,
 		&uart_get_hw(PROG_UART)->dr, // Write address (only need to set this once)
-		NULL,                             // Don't provide a read address yet
-		0,                                // Write the same value many times, then halt and interrupt
-		false                             // Don't start yet
+		NULL,                        // Don't provide a read address yet
+		0,                           // Write the same value many times, then halt and interrupt
+		false                        // Don't start yet
 		);
 
 
@@ -149,11 +150,59 @@ static void __not_in_flash_func(uart_rx_isr)(void)
 
 	portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
+static uint32_t seq_pos = 0;
+const uint8_t CMD_SEQ_START[] = { 0xE4, 0xEA, 0x82, 0x11, 0xCF, 0x56, 0x41, 0x76, 0xBC, 0x97, 0x6A, 0x4D, 0x3C, 0x8D, 0xED, 0x82 };
+#if !JTAG_ENABLED
+static void cdc_seq_filter(uint8_t* buf, uint32_t len)
+{
+	uint32_t pos_buf;
+	int i;
+	uint val;
+	static char adcReportBuffer[64];
+
+	for (pos_buf = 0; pos_buf < len; pos_buf++)
+	{
+		if (seq_pos == sizeof(CMD_SEQ_START))
+		{
+			// Match special sequence!
+			switch (buf[pos_buf])
+			{
+			case 0:
+				val = 0;
+				for (i = 0; i < 64; i++)
+				{
+					val += adc_read();
+				}
+				val /= 64;
+				len = sprintf(adcReportBuffer, "VPP_ADC=%u\r\n", val);
+				uart_set_irq_enables(PROG_UART, false, false);
+				xStreamBufferSend(uart_to_cdc_stream_handle, adcReportBuffer, len, portMAX_DELAY);
+				uart_set_irq_enables(PROG_UART, true, false);
+
+				break;
+			default:
+				break;
+			}
+			seq_pos = 0;
+
+		}
+		else
+		{
+			if (buf[pos_buf] == CMD_SEQ_START[seq_pos])
+				seq_pos++;
+			else
+			{
+				seq_pos = 0;
+			}
+		}
+
+	}
+}
+#endif
 
 static void cdc_to_uart_task(void* param)
 {
 	(void)(param);
-
 	uint32_t len;
 	for (;;)
 	{
@@ -163,6 +212,11 @@ static void cdc_to_uart_task(void* param)
 		{
 			xSemaphoreTake(uart_dma_tx.sem_ready_handle, portMAX_DELAY);
 			len = tud_cdc_read(uart_dma_tx.buf, sizeof(uart_dma_tx.buf));
+
+#if !JTAG_ENABLED
+			// check for special command sequences
+			cdc_seq_filter(uart_dma_tx.buf, len);
+#endif
 			dma_uart_tx_start(uart_dma_tx.buf, len);
 		}
 	}
@@ -209,7 +263,7 @@ static int64_t state_change_timer_cb(alarm_id_t id, void *user_data)
 	ESP_LOGI(TAG, "BOOT = 1, RST = 1");
 	set_esp_pin(GPIO_BOOT, true);
 	set_esp_pin(GPIO_RST, true);
-state_change_timer = -1;
+	state_change_timer = -1;
 	ws2812_set_rgb_state_isr(RGB_LED_STATE_PROG_B1_R1);
 
 	return 0;
@@ -267,7 +321,7 @@ void tud_cdc_line_state_cb(const uint8_t itf, const bool dtr, const bool rts)
 			ws2812_set_rgb_state(RGB_LED_STATE_PROG_B1_R0);
 		else if (!boot && !rst)
 			ws2812_set_rgb_state(RGB_LED_STATE_PROG_B0_R0);
-		
+
 		set_esp_pin(GPIO_BOOT, boot);
 		set_esp_pin(GPIO_RST, rst);
 
@@ -395,6 +449,12 @@ void start_serial_task(void *pvParameters)
 
 	};
 	loader_port_rp2040_init(&loader_cfg);
+
+#if !JTAG_ENABLED
+	adc_init();
+	adc_gpio_init(GPIO_ADCVPP);
+	adc_select_input(3);
+#endif
 
 	xTaskCreateAffinitySet(uart_to_cdc_task, "uart_to_cdc", STACK_SIZE_FROM_BYTES(8 * 1024), NULL, 5, CORE_AFFINITY_SERIAL_TASK, (TaskHandle_t *)&uart_to_cdc_task_handle);
 	xTaskCreateAffinitySet(cdc_to_uart_task, "cdc_to_uart", STACK_SIZE_FROM_BYTES(8 * 1024), NULL, 5, CORE_AFFINITY_SERIAL_TASK, (TaskHandle_t *)&cdc_to_uart_task_handle);

@@ -177,4 +177,12 @@ typedef enum
 #ifndef MSC_ENABLED
 #define MSC_ENABLED 0
 #endif
+
+#ifndef JTAG_ENABLED
+#define JTAG_ENABLED 0
+#endif
+
+#ifndef GPIO_ADCVPP
+#define GPIO_ADCVPP (29)
+#endif 
 #endif
