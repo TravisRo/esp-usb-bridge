@@ -178,12 +178,12 @@ static void cdc_seq_filter(uint8_t* buf, uint32_t len)
 				uart_set_irq_enables(PROG_UART, false, false);
 				xStreamBufferSend(uart_to_cdc_stream_handle, adcReportBuffer, len, portMAX_DELAY);
 				uart_set_irq_enables(PROG_UART, true, false);
-
+				seq_pos = 0;
 				break;
 			default:
+				seq_pos = 0;
 				break;
 			}
-			seq_pos = 0;
 
 		}
 		else
