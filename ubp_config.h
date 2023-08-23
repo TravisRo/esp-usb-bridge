@@ -12,7 +12,7 @@
  * brings our FLASH frequency up to 130mhz which is right at the maximum speed for
  * W25Q flash ICs (unless it's a really really old one)
  */
-#define RP2040_OVERCLOCK_ENABLED (1)
+#define RP2040_OVERCLOCK_ENABLED (0)
 
 /*
  * PICO_DEFAULT_WS2812_PIN is generally defined in the boards header file for those that have it.
@@ -79,19 +79,19 @@
  * make command line.
  */ 
 #ifndef GPIO_TCK
-#define GPIO_TCK (29)
+#define GPIO_TCK (19)
 #endif
 
 #ifndef GPIO_TDI
-#define GPIO_TDI (27)
+#define GPIO_TDI (17)
 #endif
 
 #ifndef GPIO_TMS
-#define GPIO_TMS (28)
+#define GPIO_TMS (18)
 #endif
 
 #ifndef GPIO_TDO
-#define GPIO_TDO (14)
+#define GPIO_TDO (16)
 #endif
 
 ////////////////////////////////////////////////////////////////////
@@ -179,10 +179,30 @@ typedef enum
 #endif
 
 #ifndef JTAG_ENABLED
-#define JTAG_ENABLED 0
+#define JTAG_ENABLED 1
 #endif
 
-#ifndef GPIO_ADCVPP
-#define GPIO_ADCVPP (29)
+#ifndef GPIO_ADC_0
+#define GPIO_ADC_0 (26)
+#define GPIO_ADC_0_RPLUS (10000)
+#define GPIO_ADC_0_RMINUS (3300)
 #endif 
+
+#ifndef GPIO_ADC_1
+#define GPIO_ADC_1 (27)
+#define GPIO_ADC_1_RPLUS (10000)
+#define GPIO_ADC_1_RMINUS (10000)
+#endif 
+
+#ifndef GPIO_ADC_2
+#define GPIO_ADC_2 (28)
+#define GPIO_ADC_2_RPLUS (10000)
+#define GPIO_ADC_2_RMINUS (3300)
+#endif 
+
+#ifndef GPIO_ADCVPP
+#define GPIO_ADCVPP (GPIO_ADC_0)
+#endif 
+
+
 #endif

@@ -4,7 +4,7 @@ if (NOT PICO_BOARD)
     # Set your custom board here
     # set(PICO_BOARD pico)
     # set(PICO_BOARD tzt_rgb_usbc_rp2040)
-    set(PICO_BOARD waveshare_rp2040_zero)
+    set(PICO_BOARD pico)
 endif()
 
 # TODO:
@@ -79,7 +79,7 @@ target_include_directories(dev_usbbridge_jtag PUBLIC
 
 # In addition to pico_stdlib required for common PicoSDK functionality, add dependency on tinyusb_device
 # for TinyUSB device support and tinyusb_board for the additional board support library used by the example
-target_link_libraries(dev_usbbridge_jtag PUBLIC pico_stdlib pico_stdio hardware_pio hardware_dma hardware_adc tinyusb_device tinyusb_board FreeRTOS-Kernel FreeRTOS-Kernel-Heap4 pico_unique_id)
+target_link_libraries(dev_usbbridge_jtag PUBLIC pico_stdlib pico_stdio hardware_pio hardware_dma hardware_adc hardware_flash hardware_watchdog tinyusb_device tinyusb_board FreeRTOS-Kernel FreeRTOS-Kernel-Heap4 pico_unique_id)
 
 # Disable the STDOUT mutex and CRLF support since we are handling them ourself in the pio_uart_logger
 target_compile_definitions(dev_usbbridge_jtag PUBLIC PICO_STDOUT_MUTEX=0 PICO_STDIO_ENABLE_CRLF_SUPPORT=0)

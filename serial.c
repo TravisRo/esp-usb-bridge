@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <pico/stdlib.h>
+#include <stdlib.h>
 #include "ubp_config.h"
 #include "esp_log.h"
 #include "esp_err.h"
@@ -31,6 +32,10 @@
 #include "stream_buffer.h"
 #include "ws2812.h"
 #include "hardware/adc.h"
+#include <hardware/flash.h>
+#include <hardware/watchdog.h>
+#include "pico/float.h"
+#include "pico/bootrom.h"
 
 static const char *TAG = "bridge_serial";
 
@@ -41,8 +46,18 @@ static volatile bool serial_read_enabled = false;
 
 TaskHandle_t cdc_to_uart_task_handle;
 TaskHandle_t uart_to_cdc_task_handle;
+TaskHandle_t flash_write_lock_task_handle;
+
 StreamBufferHandle_t uart_to_cdc_stream_handle;
 StaticStreamBuffer_t uart_to_cdc_stream_context;
+
+StaticSemaphore_t sem_flash_lock_def;
+SemaphoreHandle_t sem_flash_lock_handle;
+
+volatile bool other_core_locked = false;
+volatile bool flash_in_progress = false;
+
+static uint32_t last_bit_rate = PROG_UART_BITRATE;
 
 typedef struct _uart_dma_tx_t
 {
@@ -52,9 +67,37 @@ typedef struct _uart_dma_tx_t
 	uint8_t buf[CFG_TUD_CDC_EP_BUFSIZE];
 }uart_dma_tx_t;
 
+typedef union _cal_value_t
+{
+	float val;
+	struct
+	{
+		uint8_t b0;
+		uint8_t b1;
+		uint8_t b2;
+		uint8_t b3;
+	};
+}cal_value_t;
+
+typedef enum _adc_cal_type
+{
+	ADC_CAL_VREF,
+	ADC_CAL_A0,
+	ADC_CAL_A1,
+	ADC_CAL_A2,
+	
+	ADC_CAL_MAX
+}adc_cal_type;
+
 static uart_dma_tx_t uart_dma_tx;
 uint8_t uart_to_cdc_stream_buffer[PROG_UART_BUF_SIZE];
 
+static float adc_calibration_cache[ADC_CAL_MAX] = { 3.3F, 1.0F, 1.0F, 1.0F };
+
+static bool is_in_command_mode(void)
+{
+	return (last_bit_rate > 1200 && last_bit_rate <= 2400);
+}
 static inline void set_esp_pin(uint pin, bool val)
 {
 	if (val)
@@ -139,49 +182,266 @@ static void __not_in_flash_func(uart_rx_isr)(void)
 		temp_buffer[temp_buffer_len++] = uart_getc(PROG_UART);
 		if (temp_buffer_len == sizeof(temp_buffer))
 		{
-			xStreamBufferSendFromISR(uart_to_cdc_stream_handle, temp_buffer, temp_buffer_len, &higherPriorityTaskWoken);
+			if (!is_in_command_mode())
+			{
+				xStreamBufferSendFromISR(uart_to_cdc_stream_handle, temp_buffer, temp_buffer_len, &higherPriorityTaskWoken);
+			}
 			temp_buffer_len = 0;
 		}
 	}
 	if (temp_buffer_len > 0 && uart_to_cdc_stream_handle)
 	{
-		xStreamBufferSendFromISR(uart_to_cdc_stream_handle, temp_buffer, temp_buffer_len, &higherPriorityTaskWoken);
+		if (!is_in_command_mode())
+		{
+			xStreamBufferSendFromISR(uart_to_cdc_stream_handle, temp_buffer, temp_buffer_len, &higherPriorityTaskWoken);
+		}
 	}
 
 	portYIELD_FROM_ISR(higherPriorityTaskWoken);
 }
-static uint32_t seq_pos = 0;
-const uint8_t CMD_SEQ_START[] = { 0xE4, 0xEA, 0x82, 0x11, 0xCF, 0x56, 0x41, 0x76, 0xBC, 0x97, 0x6A, 0x4D, 0x3C, 0x8D, 0xED, 0x82 };
-#if !JTAG_ENABLED
+static int32_t seq_pos = 0;
+static int32_t seq_data_pos = 0; 
+static int32_t seq_data_len = 0; 
+static uint8_t seq_last_cmd = 0;
+;const uint8_t CMD_SEQ_START[] = { 0xE4, 0xEA, 0x82, 0x11, 0xCF, 0x56, 0x41, 0x76, 0xBC, 0x97, 0x6A, 0x4D, 0x3C, 0x8D, 0xED, 0x82 };
+
+static float calc_resistor_divider(float* volts_in, uint* r_plus, uint* r_minus, float* volts_out)
+{
+	if (volts_in == NULL)
+	{
+		return (*volts_out)*(((float)*r_plus) + ((float)*r_minus)) / ((float)*r_minus);
+	}
+	else if (r_plus == NULL)
+	{
+		return (*volts_in)*((float)*r_minus) / (*volts_out) - ((float)*r_minus);
+	}
+	else if (r_minus == NULL)
+	{
+		return (*volts_out)*((float)*r_plus) / ((*volts_in) - (*volts_out)) ;
+	}
+	else if (volts_out == NULL)
+	{
+		return (*volts_in)*((float)*r_minus) / (((float)*r_plus) + ((float)*r_minus)) ;
+	}
+}
+
+static char adcReportBuffer[128];
+
+void cmd_report_adc(uint gpio, int avg)
+{
+	int i;
+	int len;
+	uint adc_cnt = 0;
+	float volts_input;
+	float volts_ref;
+	float volts_adc;
+	uint r_minus;
+	uint r_plus;
+	adc_select_input(gpio - GPIO_ADC_0);
+	(void)adc_read();
+	
+	for (i = 0; i < avg; i++)
+	{
+		adc_cnt += adc_read();
+	}
+	adc_cnt /= avg;
+				
+	//gpio_init(gpio);
+	//gpio_put(gpio, false);
+	//gpio_set_dir(gpio, true);
+	
+	volts_ref = adc_calibration_cache[ADC_CAL_VREF];
+	volts_adc = volts_ref * ((float)adc_cnt / 4095.0F);
+	
+	switch (gpio)
+	{
+	case GPIO_ADC_0:
+		r_plus = GPIO_ADC_0_RPLUS;
+		r_minus = GPIO_ADC_0_RMINUS;
+		break;
+	case GPIO_ADC_1:
+		r_plus = GPIO_ADC_1_RPLUS;
+		r_minus = GPIO_ADC_1_RMINUS;
+		break;
+	case GPIO_ADC_2:
+		r_plus = GPIO_ADC_2_RPLUS;
+		r_minus = GPIO_ADC_2_RMINUS;
+		break;
+	default:
+		return;
+	}
+	
+	volts_input = calc_resistor_divider(NULL, &r_plus, &r_minus, &volts_adc);
+	volts_input *= adc_calibration_cache[1 + (gpio - GPIO_ADC_0)];
+	if (isnanf(volts_input))
+		volts_input = 0.0F;
+	if (isnanf(volts_adc))
+		volts_adc = 0.0F;
+	
+	len = sprintf(adcReportBuffer, "ADC%u CNT=%u,R+=%u,R-=%u,vRef=%f,vOut=%f,vIn=%f\r\n", gpio - GPIO_ADC_0, adc_cnt, r_plus, r_minus, volts_ref, volts_adc, volts_input);
+	xStreamBufferSend(uart_to_cdc_stream_handle, adcReportBuffer, len, portMAX_DELAY);
+	
+}
+#define FLASH_TARGET_OFFSET (1792*1024)                                                         //++ Starting Flash Storage location after 1.8MB ( of the 2MB )
+const uint8_t *flash_target_contents = (const uint8_t *)(XIP_BASE + FLASH_TARGET_OFFSET); 
+
+static void load_adc_calibrations()
+{
+	memcpy(adc_calibration_cache, flash_target_contents, sizeof(adc_calibration_cache));
+	
+	
+	if (isnanf(adc_calibration_cache[ADC_CAL_VREF]) || adc_calibration_cache[ADC_CAL_VREF] < 3.0F || adc_calibration_cache[ADC_CAL_VREF] > 3.6F)
+		adc_calibration_cache[ADC_CAL_VREF] = 3.3F;
+
+	if (isnanf(adc_calibration_cache[ADC_CAL_A0]) || adc_calibration_cache[ADC_CAL_A0] < 0.8F || adc_calibration_cache[ADC_CAL_A0] > 1.2F)
+		adc_calibration_cache[ADC_CAL_A0] = 1.0F;
+	
+	if (isnanf(adc_calibration_cache[ADC_CAL_A1]) || adc_calibration_cache[ADC_CAL_A1] < 0.8F || adc_calibration_cache[ADC_CAL_A1] > 1.2F)
+		adc_calibration_cache[ADC_CAL_A1] = 1.0F;
+	
+	if (isnanf(adc_calibration_cache[ADC_CAL_A2]) || adc_calibration_cache[ADC_CAL_A2] < 0.8F || adc_calibration_cache[ADC_CAL_A2] > 1.2F)
+		adc_calibration_cache[ADC_CAL_A2] = 1.0F;
+}
+
+static void report_adc_calibration(adc_cal_type calType)
+{
+	if (calType >= ADC_CAL_MAX) return;
+	int len = sprintf(adcReportBuffer, "ADCCAL%u=%f\r\n", calType, adc_calibration_cache[calType]);
+	xStreamBufferSend(uart_to_cdc_stream_handle, adcReportBuffer, len, portMAX_DELAY);
+	
+}
+static void report_to_adc(const char* str)
+{
+	int len = strlen(str);
+	xStreamBufferSend(uart_to_cdc_stream_handle, str, len, portMAX_DELAY);
+}
+
+static void write_adc_calibration(adc_cal_type calType, float val)
+{
+	if (calType >= ADC_CAL_MAX) return;
+	adc_calibration_cache[calType] = val;
+}
+
+#if DISABLED
+static void __not_in_flash_func (save_adc_calibrations)(void)
+{
+	uint8_t * write_mem = malloc(FLASH_PAGE_SIZE);
+	if (write_mem == NULL) return;
+	memset(write_mem + sizeof(adc_calibration_cache), 0, FLASH_PAGE_SIZE - sizeof(adc_calibration_cache));
+	memcpy(write_mem, adc_calibration_cache, sizeof(adc_calibration_cache));
+	
+	vTaskDelay(pdMS_TO_TICKS(500));
+	flash_in_progress = true;
+	xSemaphoreGive(sem_flash_lock_handle);
+	while (!other_core_locked) ;
+	taskENTER_CRITICAL();
+	flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE);
+	flash_range_program(FLASH_TARGET_OFFSET, write_mem, FLASH_PAGE_SIZE);
+	taskEXIT_CRITICAL();
+	flash_in_progress = false;
+	free(write_mem);
+	watchdog_reboot(0,0,1);
+}
+#endif
+
+static void save_adc_calibrations(void)
+{
+	reset_usb_boot(1 << PICO_DEFAULT_LED_PIN, 0);
+}
+
 static void cdc_seq_filter(uint8_t* buf, uint32_t len)
 {
 	uint32_t pos_buf;
-	int i;
-	uint val;
-	static char adcReportBuffer[64];
-
+	uint8_t seq_cmd;
+	static uint8_t seq_data[4];
+	cal_value_t cal_value;
 	for (pos_buf = 0; pos_buf < len; pos_buf++)
 	{
 		if (seq_pos == sizeof(CMD_SEQ_START))
 		{
+			if (seq_data_len)
+				seq_cmd = seq_last_cmd;
+			else
+			{
+				seq_cmd = buf[pos_buf];
+				seq_last_cmd = seq_cmd;
+			}
+
 			// Match special sequence!
-			switch (buf[pos_buf])
+			switch (seq_cmd)
 			{
 			case 0:
-				val = 0;
-				for (i = 0; i < 64; i++)
-				{
-					val += adc_read();
-				}
-				val /= 64;
-				len = sprintf(adcReportBuffer, "VPP_ADC=%u\r\n", val);
-				uart_set_irq_enables(PROG_UART, false, false);
-				xStreamBufferSend(uart_to_cdc_stream_handle, adcReportBuffer, len, portMAX_DELAY);
-				uart_set_irq_enables(PROG_UART, true, false);
+				cmd_report_adc(GPIO_ADC_0, 64);
 				seq_pos = 0;
+				seq_data_len = 0;
+				break;
+			case 1:
+				cmd_report_adc(GPIO_ADC_1, 64);
+				seq_pos = 0;
+				seq_data_len = 0;
+				break;
+			case 2:
+				cmd_report_adc(GPIO_ADC_2, 64);
+				seq_pos = 0;
+				seq_data_len = 0;
+				break;
+			case ADC_CAL_VREF + 3:	// VREF Calibration
+			case ADC_CAL_A0 + 3:	// ADC0 Multiplier
+			case ADC_CAL_A1 + 3:	// ADC1 Multiplier
+			case ADC_CAL_A2 + 3:	// ADC2 Multiplier
+				if (seq_data_len == 0)
+				{
+					seq_data_len = -1;
+				}
+				else if (seq_data_len == -1)
+				{
+					if (buf[pos_buf] > sizeof(seq_data))
+					{
+						seq_pos = 0;
+						seq_data_len = 0;
+						
+					}
+					else
+					{
+						seq_data_len = buf[pos_buf];
+						seq_data_pos = 0;
+					}
+
+				}
+				else
+				{
+					seq_data[seq_data_pos++] = buf[pos_buf];
+					if (seq_data_pos == seq_data_len)
+					{
+						if (seq_data_len == 1)
+						{
+							// read calibration value
+							report_adc_calibration(seq_cmd - 3);
+						}
+						else if (seq_data_len == 4)
+						{
+							// write calibration value
+							cal_value.b0 = seq_data[0];
+							cal_value.b1 = seq_data[1];
+							cal_value.b2 = seq_data[2];
+							cal_value.b3 = seq_data[3];
+							write_adc_calibration(seq_cmd - 3, cal_value.val);	
+							report_adc_calibration(seq_cmd - 3);
+						}
+
+						seq_pos = 0;
+						seq_data_len = 0;
+					}
+				}
+				break;
+			case 0xFF:
+				save_adc_calibrations();
+				load_adc_calibrations();
+				report_to_adc("ADC CALIBRATIONS SAVED!\r\n");
 				break;
 			default:
 				seq_pos = 0;
+				seq_data_len = 0;
 				break;
 			}
 
@@ -193,12 +453,12 @@ static void cdc_seq_filter(uint8_t* buf, uint32_t len)
 			else
 			{
 				seq_pos = 0;
+				seq_data_len = 0;
 			}
 		}
 
 	}
 }
-#endif
 
 static void cdc_to_uart_task(void* param)
 {
@@ -210,15 +470,34 @@ static void cdc_to_uart_task(void* param)
 		if (!tud_inited() || !tud_ready()) continue;
 		while (tud_cdc_available())
 		{
-			xSemaphoreTake(uart_dma_tx.sem_ready_handle, portMAX_DELAY);
-			len = tud_cdc_read(uart_dma_tx.buf, sizeof(uart_dma_tx.buf));
+			if (is_in_command_mode())
+			{
+				len = tud_cdc_read(uart_dma_tx.buf, sizeof(uart_dma_tx.buf));
 
-#if !JTAG_ENABLED
-			// check for special command sequences
-			cdc_seq_filter(uart_dma_tx.buf, len);
-#endif
-			dma_uart_tx_start(uart_dma_tx.buf, len);
+				// check for special command sequences
+				cdc_seq_filter(uart_dma_tx.buf, len);
+			}
+			else
+			{
+				xSemaphoreTake(uart_dma_tx.sem_ready_handle, portMAX_DELAY);
+				len = tud_cdc_read(uart_dma_tx.buf, sizeof(uart_dma_tx.buf));
+				dma_uart_tx_start(uart_dma_tx.buf, len);
+			}
 		}
+	}
+}
+
+
+static void __not_in_flash_func(flash_write_lock_task)(void* param)
+{
+	for (;;)
+	{
+		xSemaphoreTake(sem_flash_lock_handle, portMAX_DELAY);
+		other_core_locked = true;
+		taskENTER_CRITICAL();
+		while (flash_in_progress) ;
+		taskEXIT_CRITICAL();
+		other_core_locked = false;		
 	}
 }
 
@@ -450,14 +729,18 @@ void start_serial_task(void *pvParameters)
 	};
 	loader_port_rp2040_init(&loader_cfg);
 
-#if !JTAG_ENABLED
+	load_adc_calibrations();
 	adc_init();
-	adc_gpio_init(GPIO_ADCVPP);
-	adc_select_input(3);
-#endif
+	adc_gpio_init(GPIO_ADC_0);
+	adc_gpio_init(GPIO_ADC_1);
+	adc_gpio_init(GPIO_ADC_2);
 
+	sem_flash_lock_handle = xSemaphoreCreateBinaryStatic(&sem_flash_lock_def);
+	xSemaphoreTake(sem_flash_lock_handle, 0);
 	xTaskCreateAffinitySet(uart_to_cdc_task, "uart_to_cdc", STACK_SIZE_FROM_BYTES(8 * 1024), NULL, 5, CORE_AFFINITY_SERIAL_TASK, (TaskHandle_t *)&uart_to_cdc_task_handle);
 	xTaskCreateAffinitySet(cdc_to_uart_task, "cdc_to_uart", STACK_SIZE_FROM_BYTES(8 * 1024), NULL, 5, CORE_AFFINITY_SERIAL_TASK, (TaskHandle_t *)&cdc_to_uart_task_handle);
+	
+	//xTaskCreateAffinitySet(flash_write_lock_task, "flash_write_lock", STACK_SIZE_FROM_BYTES(2 * 1024), NULL, configMAX_PRIORITIES - 1, 2, (TaskHandle_t *)&flash_write_lock_task_handle);
 
 	vTaskDelete(NULL);
 }
@@ -485,11 +768,13 @@ void serial_set(const bool enable)
 
 bool serial_set_baudrate(uint32_t bit_rate)
 {
-	static uint32_t last_bit_rate = PROG_UART_BITRATE;
 	if (last_bit_rate != bit_rate)
 	{
-		uart_set_baudrate(PROG_UART, bit_rate);
 		last_bit_rate = bit_rate;
+		if (!is_in_command_mode())
+		{
+			uart_set_baudrate(PROG_UART, bit_rate);
+		}
 	}
 
 	return true;
